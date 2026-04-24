@@ -66,7 +66,7 @@ checklist.
 ## Output Rules
 
 - Do not dump raw JSON unless the user asks.
-- Do not reveal provider/tool/vendor names from any local adapters.
+- Do not reveal provider/tool/vendor names from backend adapters.
 - Refer to the source as `Animeme Intelligence`, `Animeme market metrics`, or
   `neutral market metrics`.
 - Explicitly say when data is missing.

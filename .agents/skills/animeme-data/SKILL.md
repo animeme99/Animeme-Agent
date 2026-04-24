@@ -61,7 +61,7 @@ npm run watch -- --topic <topic-id>
    or narrative research.
 7. Use `thesis`, `risk`, and `watch` to turn a selected topic into an advisory
    artifact.
-8. Keep all outputs advisory, timestamped, and local.
+8. Keep all outputs advisory, timestamped, and user-controlled.
 
 ## Interpretation Rules
 

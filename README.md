@@ -7,15 +7,15 @@
 
 **One clone, all public Animeme data.**
 
-Animeme Agent is a local, read-only intelligence kit for agents that need to
-understand meme attention in real time. Clone it, install dependencies, and let
-Codex, Claude Code, OpenCode, or any agent-compatible runtime scan live
+Animeme Agent is a read-only intelligence kit for agents that need to
+understand meme attention in real time. Clone it, install dependencies, and run
+Codex, Claude Code, OpenCode, or any agent-compatible runtime against live
 attention, inspect Spotlight, query narrative learning, analyze token addresses,
 and publish structured research artifacts.
 
 This repo is designed for agent mode first. The default output is not a landing
 page, not a wallet, and not an execution bot. It is an intelligence workbench
-for turning public Animeme data into local research decisions.
+for turning public Animeme data into research decisions.
 
 ```bash
 npx skills add 0xchalker/Animeme-Agent
@@ -31,7 +31,7 @@ npm run scan
 
 ## What This Is
 
-Animeme Agent gives local agents a shared operating layer over Animeme public
+Animeme Agent gives user-controlled agents a shared operating layer over Animeme public
 data:
 
 - Live Now Attention boards: `rising`, `latest`, `viral`.
@@ -40,18 +40,18 @@ data:
   attention distribution.
 - Token-level Animeme Intelligence scoring from neutral market metrics.
 - Raw public `/api/*` fetch access for power users.
-- Local JSON and Markdown artifacts under `artifacts/`.
+- JSON and Markdown research artifacts under `artifacts/`.
 - Agent instructions for Codex, Claude Code, and OpenCode.
 
 It is intentionally read-only. No command in this repo signs transactions,
 requests wallet keys, creates tokens, executes swaps, mutates Animeme state, or
-requires private credentials.
+requires secrets.
 
 ## System Map
 
 ```mermaid
 flowchart LR
-    User["User / Operator"] --> Agent["Local AI Agent"]
+    User["User / Operator"] --> Agent["AI Agent"]
     Agent --> Skills["Animeme Skills"]
     Skills --> CLI["Animeme CLI"]
     CLI --> Client["src/animeme-client.ts"]
@@ -74,7 +74,7 @@ sequenceDiagram
     participant A as Agent
     participant C as CLI
     participant P as Public Animeme API
-    participant L as Local Logic
+    participant L as Analysis Logic
     participant O as Artifacts
 
     A->>C: npm run scan
@@ -102,7 +102,7 @@ sequenceDiagram
 
 ## Install As A Skill
 
-Use this when the agent supports local skills:
+Use this when the agent supports skill installation:
 
 ```bash
 npx skills add 0xchalker/Animeme-Agent
@@ -131,20 +131,6 @@ npm run catalog
 npm run scan
 ```
 
-Use a local Animeme web server while developing:
-
-```bash
-ANIMEME_API_BASE_URL=http://127.0.0.1:3000 npm run scan
-```
-
-PowerShell:
-
-```powershell
-$env:ANIMEME_API_BASE_URL="http://127.0.0.1:3000"
-npm run scan
-Remove-Item Env:\ANIMEME_API_BASE_URL
-```
-
 ## Command Matrix
 
 | Command | Purpose | Output |
@@ -162,7 +148,7 @@ Remove-Item Env:\ANIMEME_API_BASE_URL
 | `npm run fetch -- --path /api/<path>` | Fetch any public Animeme API path. | Raw fetch artifact |
 | `npm run thesis -- --topic <topic-id>` | Convert a topic into a narrative thesis. | Thesis artifact |
 | `npm run risk -- --topic <topic-id>` | Produce a risk checklist for a topic. | Risk artifact |
-| `npm run watch -- --topic <topic-id>` | Produce a local watch plan. | Watch artifact |
+| `npm run watch -- --topic <topic-id>` | Produce a watch plan. | Watch artifact |
 
 ## Token Intelligence Engine
 
@@ -282,7 +268,7 @@ flowchart LR
     Rank --> Thesis["Thesis artifact"]
     Rank --> Risk["Risk artifact"]
     Rank --> Watch["Watch artifact"]
-    Thesis --> Artifacts["Local artifacts"]
+    Thesis --> Artifacts["Generated artifacts"]
     Risk --> Artifacts
     Watch --> Artifacts
 ```
@@ -303,7 +289,7 @@ flowchart LR
 ### Agent Mode
 
 Use this mode when the user wants Codex, Claude Code, OpenCode, or another
-local agent to act as an analyst.
+agent runtime to act as an analyst.
 
 Recommended loop:
 
@@ -358,7 +344,7 @@ OpenCode reads `opencode.json` and can run the approved read-only scripts.
 
 ## Prompt Recipes
 
-Use these prompts inside your local agent runtime.
+Use these prompts inside an agent runtime.
 
 ### Daily Attention Brief
 
@@ -398,7 +384,7 @@ Summarize only the fields that matter for the user's question.
 
 ## Artifact Contract
 
-Every command writes local artifacts:
+Every command writes generated artifacts:
 
 ```text
 artifacts/
@@ -406,7 +392,7 @@ artifacts/
   2026-04-24T02-17-52-895Z-token-<address>.md
 ```
 
-Artifacts are intentionally local and advisory.
+Artifacts are intentionally advisory and user-controlled.
 
 | Artifact | Purpose |
 | --- | --- |
@@ -469,7 +455,7 @@ flowchart TD
     Request --> Json{"JSON response?"}
     Json -->|Yes| Normalize["Normalize fields"]
     Json -->|No| Warning["Return explicit warning"]
-    Normalize --> Score["Open local scoring"]
+    Normalize --> Score["Open scoring logic"]
     Warning --> Artifact["Write artifact with missing-data notes"]
     Score --> Artifact
 ```
@@ -490,7 +476,7 @@ Animeme Agent has a strict boundary:
 flowchart LR
     Allowed["Allowed"] --> Read["Read public Animeme data"]
     Allowed --> Analyze["Analyze and score"]
-    Allowed --> Write["Write local artifacts"]
+    Allowed --> Write["Write generated artifacts"]
     Blocked["Blocked"] --> Trade["Trade / swap"]
     Blocked --> Sign["Sign transactions"]
     Blocked --> Keys["Request private keys"]
@@ -507,8 +493,8 @@ Rules:
 
 ## Memory Policy
 
-`memory/` is for notes created after a user clones this repo and starts using
-it. Do not backfill older sessions. Do not store secrets.
+`memory/` is for user-created notes from future agent runs. Do not backfill
+older sessions. Do not store secrets.
 
 ## Development
 
@@ -536,17 +522,11 @@ Run deep token intelligence:
 npm run token:deep -- --address <token-address>
 ```
 
-Use a local Animeme web server:
-
-```bash
-ANIMEME_API_BASE_URL=http://127.0.0.1:3000 npm run token:deep -- --address <token-address>
-```
-
 ## Extending The Kit
 
 Add new public data routes in `src/animeme-client.ts`.
 
-Add new local analysis logic in a dedicated file under `src/`.
+Add new analysis logic in a dedicated file under `src/`.
 
 Expose new user commands through `src/cli.ts` and `package.json`.
 
@@ -564,7 +544,7 @@ No. It is read-only.
 
 ### Does this need wallet credentials?
 
-No. The public workflows do not require private credentials.
+No. The public workflows do not require secrets.
 
 ### Can agents fetch arbitrary websites?
 
@@ -591,5 +571,5 @@ npm run scan
 npm run token:deep -- --address <token-address>
 ```
 
-Animeme Agent turns public Animeme data into local, inspectable, timestamped
-agent intelligence.
+Animeme Agent turns public Animeme data into inspectable, timestamped agent
+intelligence.

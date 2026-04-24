@@ -285,7 +285,7 @@ function renderCatalogMarkdown() {
 	return [
 		"# Animeme Public Data Catalog",
 		"",
-		"One clone, all public Animeme data. These are read-only endpoints for local agents.",
+		"One clone, all public Animeme data. These are read-only endpoints for user-controlled agents.",
 		"",
 		...PUBLIC_DATA_CATALOG.flatMap((entry) => [
 			`## ${entry.id}`,

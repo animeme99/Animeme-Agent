@@ -1,13 +1,13 @@
 # Animeme Public Data Catalog
 
-This repo exposes one local agent skill over the public Animeme API surface.
+This repo exposes agent skills over the public Animeme API surface.
 Everything is read-only and advisory.
 
 ## Live Attention
 
 - `GET /api/now-attention-feed?modes=rising,latest,viral`
 - Use for current hot trends, new topics, viral topics, topic token lists, and
-  local scan artifacts.
+  scan artifacts.
 - CLI: `npm run scan`, `npm run hot`, `npm run new`
 
 ## Attention Spotlight

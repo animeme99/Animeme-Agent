@@ -4,7 +4,7 @@
 
 Use Animeme public data to scout meme attention trends, analyze arbitrary token
 addresses, search narrative topics, review Attention Spotlight, inspect
-learning data, and publish local advisory artifacts.
+learning data, and publish advisory artifacts.
 
 This repo is read-only with respect to markets and Animeme production systems.
 Do not trade, sign transactions, request private keys, or automate wallet
@@ -34,15 +34,9 @@ actions.
 
 Default base URL: `https://animeme.app`
 
-Override with:
-
-```bash
-ANIMEME_API_BASE_URL=http://127.0.0.1:3000
-```
-
-Use only public Animeme `/api/*` routes. The local client is in
+Use only public Animeme `/api/*` routes. The API client is in
 `src/animeme-client.ts`; all analysis and artifact logic is in `src/cli.ts`.
-Do not require private credentials.
+Do not require secrets.
 
 ## Command Map
 
@@ -66,7 +60,7 @@ Do not require private credentials.
 
 When the user asks for agent mode:
 
-- Turn Animeme context into local tasks that Codex, Claude Code, or OpenCode can
+- Turn Animeme context into agent tasks that Codex, Claude Code, or OpenCode can
   run.
 - Use `animeme-data` for public Animeme data workflows.
 - Use `animeme-token-intelligence` for token safety and conviction reviews.
