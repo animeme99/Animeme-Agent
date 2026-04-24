@@ -14,18 +14,21 @@ actions.
 
 1. Run `npm install` if dependencies are missing.
 2. Run `npm run typecheck`.
-3. Load the single local skill at `.agents/skills/animeme-data/SKILL.md`.
-4. Run `npm run catalog` to see the public data surface.
-5. Run `npm run scan` for current attention.
-6. Use the most specific command for the task:
+3. Load `.agents/skills/animeme-data/SKILL.md`.
+4. For token due diligence, also load
+   `.agents/skills/animeme-token-intelligence/SKILL.md`.
+5. Run `npm run catalog` to see the public data surface.
+6. Run `npm run scan` for current attention.
+7. Use the most specific command for the task:
    - `npm run token -- --address <token-address>`
+   - `npm run token:deep -- --address <token-address>`
    - `npm run topics -- --search <query>`
    - `npm run spotlight`
    - `npm run learning`
    - `npm run thesis -- --topic <topic-id>`
    - `npm run risk -- --topic <topic-id>`
    - `npm run watch -- --topic <topic-id>`
-7. Save outputs only under `artifacts/`.
+8. Save outputs only under `artifacts/`.
 
 ## Data Source
 
@@ -52,6 +55,8 @@ Do not require private credentials.
 - `npm run topics -- --search <query>`: searchable learning archive.
 - `npm run topic -- --topic <topic-id>`: one learning topic detail.
 - `npm run token -- --address <token-address>`: arbitrary token analysis.
+- `npm run token:deep -- --address <token-address>`: deeper token due
+  diligence with Animeme Intelligence scoring.
 - `npm run fetch -- --path /api/<path>`: raw public Animeme API fetch.
 - `npm run thesis -- --topic <topic-id>`: narrative thesis artifact.
 - `npm run risk -- --topic <topic-id>`: risk checklist artifact.
@@ -63,7 +68,8 @@ When the user asks for agent mode:
 
 - Turn Animeme context into local tasks that Codex, Claude Code, or OpenCode can
   run.
-- Use the umbrella `animeme-data` skill for all public Animeme data workflows.
+- Use `animeme-data` for public Animeme data workflows.
+- Use `animeme-token-intelligence` for token safety and conviction reviews.
 - Prefer existing commands before inventing new fetch flows.
 - Write JSON and Markdown artifacts into `artifacts/`.
 - Keep every recommendation advisory and reversible.

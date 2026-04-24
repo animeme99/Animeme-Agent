@@ -37,6 +37,15 @@ Everything is read-only and advisory.
 - Use for arbitrary token market metrics through Animeme public routes.
 - Combine with live attention matches and learning topic matches.
 - CLI: `npm run token -- --address <token-address>`
+- Deep CLI: `npm run token:deep -- --address <token-address>`
+
+## Token Intelligence Skill
+
+- Skill: `.agents/skills/animeme-token-intelligence/SKILL.md`
+- Use for token safety, holder-quality, crowding, manipulation-risk, and
+  conviction reviews.
+- Output is branded as Animeme Intelligence and should not expose backend
+  adapter names.
 
 ## Raw Public Fetch
 

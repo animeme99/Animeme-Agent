@@ -18,6 +18,7 @@
 					"npm run spotlight*": "allow",
 					"npm run thesis*": "allow",
 					"npm run token*": "allow",
+					"npm run token:deep*": "allow",
 					"npm run topic*": "allow",
 					"npm run topics*": "allow",
 					"npm run risk*": "allow",

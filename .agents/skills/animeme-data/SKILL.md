@@ -5,8 +5,9 @@ description: Use live public Animeme data to scan trends, analyze tokens, inspec
 
 # Animeme Data
 
-Use this single skill whenever the user asks an agent to work with Animeme
-public data.
+Use this skill whenever the user asks an agent to work with Animeme public
+data. For deeper token due diligence, also load
+`.agents/skills/animeme-token-intelligence/SKILL.md`.
 
 ## Scope
 
@@ -24,6 +25,7 @@ public data.
 npm run catalog
 npm run scan
 npm run token -- --address <token-address>
+npm run token:deep -- --address <token-address>
 npm run spotlight
 npm run learning
 ```
@@ -52,12 +54,14 @@ npm run watch -- --topic <topic-id>
    the task.
 2. Run `npm run scan` to get the current live attention context.
 3. Use `token` for arbitrary token address analysis.
-4. Use `spotlight` when the user asks what Attention Spotlight is showing.
-5. Use `learning`, `topics`, or `topic` when the user asks for historic lessons
+4. Use `token:deep` when the user asks if a token is safe, risky, manipulated,
+   crowded, or worth deeper research.
+5. Use `spotlight` when the user asks what Attention Spotlight is showing.
+6. Use `learning`, `topics`, or `topic` when the user asks for historic lessons
    or narrative research.
-6. Use `thesis`, `risk`, and `watch` to turn a selected topic into an advisory
+7. Use `thesis`, `risk`, and `watch` to turn a selected topic into an advisory
    artifact.
-7. Keep all outputs advisory, timestamped, and local.
+8. Keep all outputs advisory, timestamped, and local.
 
 ## Interpretation Rules
 

@@ -11,6 +11,11 @@ import {
 	type AttentionMode,
 	type TokenMetricsResponse,
 } from "./animeme-client.js";
+import {
+	buildTokenIntelligenceReport,
+	findMetricForAddress,
+	type TokenIntelligenceReport,
+} from "./token-intelligence.js";
 
 type ParsedArgs = {
 	flags: Record<string, string | true>;
@@ -170,7 +175,8 @@ async function main() {
 			console.log(`\nArtifacts written: ${artifact.markdownPath}, ${artifact.jsonPath}`);
 			return;
 		}
-		case "token": {
+		case "token":
+		case "token-deep": {
 			const address = readRequiredFlag(args, "address");
 			const [contextResult, metricsResult, learningResult] =
 				await Promise.allSettled([
@@ -193,12 +199,21 @@ async function main() {
 			const attentionTopics = context
 				? findTopicsByTokenAddress(context, address)
 				: [];
+			const learningItems = extractItems(learning);
+			const report = buildTokenIntelligenceReport({
+				address,
+				attentionTopics,
+				learningItems,
+				metrics,
+			});
 			const markdown = renderTokenMarkdown({
 				address,
 				attentionTopics,
 				context,
+				deep: command === "token-deep" || Boolean(args.flags.deep),
 				learning,
 				metrics,
+				report,
 				warnings: collectSettledWarnings({
 					context: contextResult,
 					learning: learningResult,
@@ -210,9 +225,10 @@ async function main() {
 				attentionTopics,
 				contextGeneratedAt: context?.generatedAt,
 				createdAt: new Date().toISOString(),
-				kind: "token",
+				kind: command,
 				learning,
 				metrics,
+				report,
 			});
 			await writeFile(artifact.markdownPath, markdown, "utf8");
 			console.log(markdown);
@@ -404,8 +420,10 @@ function renderTokenMarkdown(options: {
 	address: string;
 	attentionTopics: AgentContextTopic[];
 	context: AgentContextResponse | null;
+	deep?: boolean;
 	learning: unknown;
 	metrics: TokenMetricsResponse | null;
+	report: TokenIntelligenceReport;
 	warnings: string[];
 }) {
 	const metric = findMetricForAddress(options.metrics, options.address);
@@ -415,6 +433,7 @@ function renderTokenMarkdown(options: {
 		"",
 		`Generated: ${new Date().toISOString()}`,
 		options.context ? `Attention context: ${options.context.generatedAt}` : "Attention context: unavailable",
+		`Animeme Intelligence Score: ${options.report.score}/100 (${options.report.verdict}, ${options.report.confidence} confidence)`,
 		"",
 		"## Live Attention Matches",
 		"",
@@ -431,6 +450,21 @@ function renderTokenMarkdown(options: {
 			? renderMetricLines(metric)
 			: ["- Structured market metrics are not available yet for this address."]),
 		"",
+		"## Intelligence Read",
+		"",
+		`- Verdict: ${options.report.verdict}`,
+		`- Confidence: ${options.report.confidence}`,
+		`- Score: ${options.report.score}/100`,
+		...(options.report.strengths.length
+			? options.report.strengths.map((item) => `- Strength: ${item}`)
+			: ["- Strength: No confirmed strength yet."]),
+		...(options.report.warnings.length
+			? options.report.warnings.map((item) => `- Warning: ${item}`)
+			: ["- Warning: No major warning from available neutral metrics."]),
+		...(options.report.hardStops.length
+			? options.report.hardStops.map((item) => `- Hard stop: ${item}`)
+			: []),
+		"",
 		"## Learning Matches",
 		"",
 		...(learningItems.length
@@ -442,6 +476,10 @@ function renderTokenMarkdown(options: {
 		"- Treat this as research context, not an execution signal.",
 		"- If live attention is missing, require an external narrative reason before escalating.",
 		"- If liquidity, holder, or volume fields are unavailable, keep the token in observation mode.",
+		"",
+		...(options.deep
+			? renderDeepTokenChecklist(options.report)
+			: ["Run `npm run token:deep -- --address " + options.address + "` for the full due-diligence checklist."]),
 		"",
 		...(options.warnings.length
 			? ["## Warnings", "", ...options.warnings.map((warning) => `- ${warning}`)]
@@ -711,24 +749,6 @@ function pickTitle(item: unknown): string | null {
 	return null;
 }
 
-function findMetricForAddress(
-	metrics: TokenMetricsResponse | null,
-	address: string,
-) {
-	const items = metrics?.items || {};
-	const normalized = address.trim().toLowerCase();
-	for (const [key, value] of Object.entries(items)) {
-		if (key.toLowerCase() === normalized) {
-			return value;
-		}
-		const itemAddress = getStringField(value, ["address", "tokenAddress", "ca"]);
-		if (itemAddress?.toLowerCase() === normalized) {
-			return value;
-		}
-	}
-	return null;
-}
-
 function renderMetricLines(metric: Record<string, unknown>) {
 	const fields = [
 		["Symbol", ["symbol", "ticker"]],
@@ -754,6 +774,21 @@ function renderMetricLines(metric: Record<string, unknown>) {
 		: ["- Structured market metrics returned. See JSON artifact for raw fields."];
 }
 
+function renderDeepTokenChecklist(report: TokenIntelligenceReport) {
+	return [
+		"## Deep Due-Diligence Checklist",
+		"",
+		`- Concentration: ${formatProfileValue(report.marketProfile.top10HolderPercent)} top-10 holder share.`,
+		`- Creator/dev exposure: ${formatProfileValue(report.marketProfile.creatorDevHoldingPercent)}.`,
+		`- Insider pressure: ${formatProfileValue(report.marketProfile.insiderPercent)}.`,
+		`- Bundled activity: ${formatProfileValue(report.marketProfile.bundlerPercent)}.`,
+		`- Fresh-wallet mix: ${formatProfileValue(report.marketProfile.freshWalletPercent)}.`,
+		`- Smart holders: ${formatCountValue(report.marketProfile.smartHolders)}.`,
+		`- KOL holders: ${formatCountValue(report.marketProfile.kolHolders)}.`,
+		"- Next step: compare this score against live attention. Do not escalate if the token has no attention match and weak neutral metrics.",
+	];
+}
+
 function getField(record: Record<string, unknown>, keys: readonly string[]) {
 	for (const key of keys) {
 		if (record[key] != null && record[key] !== "") {
@@ -761,11 +796,6 @@ function getField(record: Record<string, unknown>, keys: readonly string[]) {
 		}
 	}
 	return null;
-}
-
-function getStringField(record: Record<string, unknown>, keys: readonly string[]) {
-	const value = getField(record, keys);
-	return typeof value === "string" ? value : null;
 }
 
 function describeKeys(value: unknown) {
@@ -790,6 +820,24 @@ function formatMetricValue(value: unknown) {
 		}).format(value);
 	}
 	return String(value);
+}
+
+function formatProfileValue(value: number | null) {
+	if (value == null) {
+		return "unavailable";
+	}
+	return `${Intl.NumberFormat("en", {
+		maximumFractionDigits: 2,
+	}).format(value)}%`;
+}
+
+function formatCountValue(value: number | null) {
+	if (value == null) {
+		return "unavailable";
+	}
+	return Intl.NumberFormat("en", {
+		maximumFractionDigits: 0,
+	}).format(value);
 }
 
 function formatUsd(value: number) {
@@ -826,6 +874,7 @@ Commands:
   npm run topics -- --search <query>
   npm run topic -- --topic <topic-id>
   npm run token -- --address <token-address>
+  npm run token:deep -- --address <token-address>
   npm run fetch -- --path /api/learning/topics?pageSize=5
   npm run thesis -- --topic <topic-id>
   npm run risk -- --topic <topic-id>

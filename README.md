@@ -40,6 +40,7 @@ npm run learning
 npm run topics -- --search <query>
 npm run topic -- --topic <topic-id>
 npm run token -- --address <token-address>
+npm run token:deep -- --address <token-address>
 npm run fetch -- --path /api/learning/topics?pageSize=5
 npm run thesis -- --topic <topic-id>
 npm run risk -- --topic <topic-id>
@@ -54,23 +55,28 @@ Outputs are written into `artifacts/` as JSON and Markdown.
 - Attention Spotlight and recent performance notifications.
 - Narrative Learning summary, topics, topic details, key resources, outcomes,
   and attention distribution.
-- Neutral market metrics for arbitrary token addresses through Animeme public
-  API routes.
+- Neutral market metrics and Animeme Intelligence scoring for arbitrary token
+  addresses through Animeme public API routes.
 - Raw read-only fetches for any public Animeme `/api/*` path.
 
-See `docs/data-catalog.md` or run `npm run catalog`.
+See `docs/data-catalog.md`, `docs/token-intelligence-playbook.md`, or run
+`npm run catalog`.
 
 ## Agent Skill
 
-This repo ships one umbrella skill:
+This repo ships two public-facing skills:
 
 ```text
 .agents/skills/animeme-data/SKILL.md
+.agents/skills/animeme-token-intelligence/SKILL.md
 ```
 
 The `animeme-data` skill covers all public Animeme data workflows: trend
 scouting, topic search, token analysis, Spotlight review, learning research,
 risk review, watchlists, and artifact publishing.
+
+The `animeme-token-intelligence` skill is for deeper token safety, crowding,
+holder-quality, and conviction reviews.
 
 ## Agent Tool Compatibility
 

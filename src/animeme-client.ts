@@ -85,11 +85,16 @@ export const PUBLIC_DATA_CATALOG: PublicDataCatalogEntry[] = [
 		useFor: ["24h distribution", "winner score", "attention share"],
 	},
 	{
-		description: "Neutral market metrics for arbitrary token addresses.",
+		description: "Neutral market metrics for arbitrary token addresses and Animeme Intelligence scoring.",
 		id: "market-token-metrics",
 		method: "GET",
 		path: "/api/market/token-metrics?addresses=<address>",
-		useFor: ["token analysis", "liquidity checks", "market risk review"],
+		useFor: [
+			"token analysis",
+			"holder-quality checks",
+			"market risk review",
+			"deep due diligence",
+		],
 	},
 ];
 

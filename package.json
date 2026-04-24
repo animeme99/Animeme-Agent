@@ -17,6 +17,7 @@
 		"spotlight": "tsx src/cli.ts spotlight",
 		"thesis": "tsx src/cli.ts thesis",
 		"token": "tsx src/cli.ts token",
+		"token:deep": "tsx src/cli.ts token-deep",
 		"topic": "tsx src/cli.ts topic",
 		"topics": "tsx src/cli.ts topics",
 		"risk": "tsx src/cli.ts risk",
