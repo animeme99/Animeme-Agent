@@ -30,6 +30,43 @@ actions.
    - `npm run watch -- --topic <topic-id>`
 8. Save outputs only under `artifacts/`.
 
+## New User Guide
+
+When the user has just installed the skill, asks what Animeme Agent can do, or
+seems unsure what to run next, do not wait for them to guess commands. Start
+with this short menu:
+
+```text
+Animeme Agent can help with:
+1. Scan what is hot now.
+2. Explain Attention Spotlight.
+3. Search Narrative Learning.
+4. Analyze any token address.
+5. Create thesis, risk, and watch artifacts.
+```
+
+Then offer this demo flow:
+
+```text
+Default demo flow:
+- Run npm run catalog.
+- Run npm run scan.
+- Pick the strongest topic from the scan.
+- Run npm run thesis -- --topic <topic-id>.
+- Run npm run risk -- --topic <topic-id>.
+- Summarize the artifact files created under artifacts/.
+```
+
+If the user provides a token address, switch to:
+
+```text
+Token demo flow:
+- Run npm run token:deep -- --address <token-address>.
+- Explain the Animeme Intelligence Score.
+- Separate strengths, warnings, hard stops, and missing data.
+- Recommend the next research command, not a trade.
+```
+
 ## Data Source
 
 Default base URL: `https://animeme.app`
@@ -60,8 +97,8 @@ Do not require secrets.
 
 When the user asks for agent mode:
 
-- Turn Animeme context into agent tasks that Codex, Claude Code, or OpenCode can
-  run.
+- Turn Animeme context into agent tasks that Codex, Claude Code, OpenCode, or
+  OpenClaw can run.
 - Use `animeme-data` for public Animeme data workflows.
 - Use `animeme-token-intelligence` for token safety and conviction reviews.
 - Prefer existing commands before inventing new fetch flows.

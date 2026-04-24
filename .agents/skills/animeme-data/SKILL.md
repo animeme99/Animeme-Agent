@@ -1,12 +1,13 @@
 ---
 name: animeme-data
-description: Use live public Animeme data to scan trends, analyze tokens, inspect Attention Spotlight, query learning data, and publish advisory artifacts for Codex, Claude Code, and OpenCode.
+description: Use live public Animeme data to scan trends, analyze tokens, inspect Attention Spotlight, query learning data, and publish advisory artifacts for Codex, Claude Code, OpenCode, and OpenClaw.
 ---
 
 # Animeme Data
 
 Use this skill whenever the user asks an agent to work with Animeme public
-data. For deeper token due diligence, also load
+data. It is compatible with Codex, Claude Code, OpenCode, OpenClaw, and other
+AgentSkills-compatible runtimes. For deeper token due diligence, also load
 `.agents/skills/animeme-token-intelligence/SKILL.md`.
 
 ## Scope
@@ -28,6 +29,42 @@ npm run token -- --address <token-address>
 npm run token:deep -- --address <token-address>
 npm run spotlight
 npm run learning
+```
+
+## First Response Guide
+
+When the user just installed the skill, asks what Animeme can do, or seems
+unsure where to start, respond with this menu before running commands:
+
+```text
+Animeme Agent can help with:
+1. Scan what is hot now.
+2. Explain Attention Spotlight.
+3. Search Narrative Learning.
+4. Analyze any token address.
+5. Create thesis, risk, and watch artifacts.
+```
+
+Then propose the default demo:
+
+```text
+Default demo flow:
+- Run npm run catalog.
+- Run npm run scan.
+- Pick the strongest topic from the scan.
+- Run npm run thesis -- --topic <topic-id>.
+- Run npm run risk -- --topic <topic-id>.
+- Summarize the artifact files created under artifacts/.
+```
+
+If the user provides a token address, use the token flow instead:
+
+```text
+Token demo flow:
+- Run npm run token:deep -- --address <token-address>.
+- Explain the Animeme Intelligence Score.
+- Separate strengths, warnings, hard stops, and missing data.
+- Recommend the next research command, not a trade.
 ```
 
 ## Data Commands

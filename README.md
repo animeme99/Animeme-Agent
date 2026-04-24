@@ -3,15 +3,15 @@
 ![Node >=20](https://img.shields.io/badge/node-%3E%3D20-0f3b2e?style=for-the-badge)
 ![Read Only](https://img.shields.io/badge/runtime-read--only-111111?style=for-the-badge)
 ![Public Data](https://img.shields.io/badge/data-animeme%20public%20api-c6a15b?style=for-the-badge)
-![Agent Skills](https://img.shields.io/badge/skills-codex%20%7C%20claude%20%7C%20opencode-1d2b24?style=for-the-badge)
+![Agent Skills](https://img.shields.io/badge/skills-codex%20%7C%20claude%20%7C%20opencode%20%7C%20openclaw-1d2b24?style=for-the-badge)
 
 **One clone, all public Animeme data.**
 
 Animeme Agent is a read-only intelligence kit for agents that need to
 understand meme attention in real time. Clone it, install dependencies, and run
-Codex, Claude Code, OpenCode, or any agent-compatible runtime against live
-attention, inspect Spotlight, query narrative learning, analyze token addresses,
-and publish structured research artifacts.
+Codex, Claude Code, OpenCode, OpenClaw, or any AgentSkills-compatible runtime
+against live attention, inspect Spotlight, query narrative learning, analyze
+token addresses, and publish structured research artifacts.
 
 This repo is designed for agent mode first. The default output is not a landing
 page, not a wallet, and not an execution bot. It is an intelligence workbench
@@ -41,7 +41,7 @@ data:
 - Token-level Animeme Intelligence scoring from neutral market metrics.
 - Raw public `/api/*` fetch access for power users.
 - JSON and Markdown research artifacts under `artifacts/`.
-- Agent instructions for Codex, Claude Code, and OpenCode.
+- Agent instructions for Codex, Claude Code, OpenCode, and OpenClaw.
 
 It is intentionally read-only. No command in this repo signs transactions,
 requests wallet keys, creates tokens, executes swaps, mutates Animeme state, or
@@ -119,6 +119,47 @@ The repo exposes two public-facing skills:
 
 `animeme-token-intelligence` is the deeper due-diligence skill for token safety,
 crowding, holder quality, manipulation risk, and conviction review.
+
+## What Happens After Install
+
+After running:
+
+```bash
+npx skills add 0xchalker/Animeme-Agent
+```
+
+Ask the agent:
+
+```text
+Use the Animeme skills. Show me what you can do, then run the default demo flow.
+```
+
+The agent should respond with a short capability menu:
+
+```text
+Animeme Agent can help with:
+1. Scan what is hot now.
+2. Explain Attention Spotlight.
+3. Search Narrative Learning.
+4. Analyze a token address.
+5. Produce thesis, risk, and watch artifacts.
+
+Default demo:
+- Run npm run catalog.
+- Run npm run scan.
+- Pick the strongest topic.
+- Run npm run thesis -- --topic <topic-id>.
+- Run npm run risk -- --topic <topic-id>.
+- Summarize the artifact files created under artifacts/.
+```
+
+For token due diligence:
+
+```text
+Use animeme-token-intelligence.
+Run npm run token:deep -- --address <token-address>.
+Explain the score, warnings, hard stops, and missing data.
+```
 
 ## Clone And Run
 
@@ -320,7 +361,16 @@ The agent should summarize:
 - What would invalidate the thesis.
 - Which command to run next.
 
-## Codex, Claude Code, OpenCode
+## Available For These Agents
+
+| Agent | How it uses this repo | Starter prompt |
+| --- | --- | --- |
+| Codex | Reads `AGENTS.md` and project skills. | `Use AGENTS.md and run the default Animeme demo flow.` |
+| Claude Code | Uses `CLAUDE.md` and installed AgentSkills folders. | `Use the Animeme skills. Show me what you can do, then run the default demo flow.` |
+| OpenCode | Reads `opencode.json` plus the skill folders. | `Open the animeme agent and run npm run scan.` |
+| OpenClaw | Uses AgentSkills-compatible `SKILL.md` folders after installation. | `Load the Animeme skills and run the default demo flow.` |
+
+## Runtime Examples
 
 Codex:
 
@@ -341,6 +391,12 @@ opencode
 ```
 
 OpenCode reads `opencode.json` and can run the approved read-only scripts.
+
+OpenClaw:
+
+```text
+Load the Animeme skills and run the default demo flow.
+```
 
 ## Prompt Recipes
 

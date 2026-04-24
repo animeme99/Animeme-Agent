@@ -47,6 +47,24 @@ Everything is read-only and advisory.
 - Output is branded as Animeme Intelligence and should not expose backend
   adapter names.
 
+## Default Agent Demo
+
+Use this flow when a user has just installed Animeme Agent and wants to see it
+work:
+
+1. `npm run catalog`
+2. `npm run scan`
+3. Pick the strongest topic from the scan output.
+4. `npm run thesis -- --topic <topic-id>`
+5. `npm run risk -- --topic <topic-id>`
+6. Summarize the Markdown artifacts written under `artifacts/`.
+
+For token users, ask for a token address and run:
+
+```bash
+npm run token:deep -- --address <token-address>
+```
+
 ## Raw Public Fetch
 
 - Any public Animeme path under `/api/*`.

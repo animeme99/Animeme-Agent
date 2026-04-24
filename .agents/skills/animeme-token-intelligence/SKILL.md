@@ -28,6 +28,29 @@ npm run token:deep -- --address <token-address>
 Use `token` for a quick report. Use `token:deep` for a fuller due-diligence
 checklist.
 
+## First Response Guide
+
+When the user asks for token analysis but does not provide an address, ask for
+the token address before running commands.
+
+When an address is available, run:
+
+```bash
+npm run token:deep -- --address <token-address>
+```
+
+Then summarize:
+
+- Animeme Intelligence Score and verdict.
+- Live attention matches.
+- Learning matches.
+- Neutral market metrics.
+- Strengths.
+- Warnings.
+- Hard stops.
+- Missing data.
+- Next research command.
+
 ## Due-Diligence Framework
 
 1. Start with live attention:
