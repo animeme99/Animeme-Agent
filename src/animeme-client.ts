@@ -1,7 +1,97 @@
 export const DEFAULT_ANIMEME_API_BASE_URL = "https://animeme.app";
-export const AGENT_CONTEXT_MODES = ["rising", "latest", "viral"] as const;
+export const ATTENTION_MODES = ["rising", "latest", "viral"] as const;
+export const DEFAULT_ATTENTION_MODES = ATTENTION_MODES;
 
-export type AgentContextMode = (typeof AGENT_CONTEXT_MODES)[number];
+export type AttentionMode = (typeof ATTENTION_MODES)[number];
+export type JsonObject = Record<string, unknown>;
+
+export type PublicDataCatalogEntry = {
+	description: string;
+	id: string;
+	method: "GET";
+	path: string;
+	useFor: string[];
+};
+
+export const PUBLIC_DATA_CATALOG: PublicDataCatalogEntry[] = [
+	{
+		description: "Live Now Attention topic boards by mode.",
+		id: "now-attention-feed",
+		method: "GET",
+		path: "/api/now-attention-feed?modes=rising,latest,viral",
+		useFor: ["hot trends", "new topics", "viral boards", "topic tokens"],
+	},
+	{
+		description: "Canonical Attention Spotlight rail and recent history.",
+		id: "spotlight",
+		method: "GET",
+		path: "/api/spotlight?limit=15&historyLimit=30",
+		useFor: ["Attention Spotlight", "breakout topics", "recent signals"],
+	},
+	{
+		description: "Historical spotlight signals for specific topic ids.",
+		id: "spotlight-topic-signals",
+		method: "GET",
+		path: "/api/spotlight-topic-signals?topicIds=<topic-id>",
+		useFor: ["topic spotlight history", "first signal", "performance context"],
+	},
+	{
+		description: "Recent public performance milestone notifications.",
+		id: "spotlight-performance-notifications",
+		method: "GET",
+		path: "/api/spotlight-performance-notifications",
+		useFor: ["milestone alerts", "recent winners"],
+	},
+	{
+		description: "Learning dashboard summary across tracked narratives.",
+		id: "learning-summary",
+		method: "GET",
+		path: "/api/learning/summary",
+		useFor: ["learning overview", "best performance", "market lessons"],
+	},
+	{
+		description: "Searchable narrative learning topic archive.",
+		id: "learning-topics",
+		method: "GET",
+		path: "/api/learning/topics?page=1&pageSize=20&search=<query>",
+		useFor: ["topic search", "token address lookup", "new archived topics"],
+	},
+	{
+		description: "Full detail for one narrative learning topic.",
+		id: "learning-topic-detail",
+		method: "GET",
+		path: "/api/learning/topics/<topic-id>",
+		useFor: ["topic detail", "post-mortem", "resource extraction"],
+	},
+	{
+		description: "Curated key-resource buckets from learning data.",
+		id: "learning-key-resources",
+		method: "GET",
+		path: "/api/learning/key-resources?bucket=bestPerformance",
+		useFor: ["best examples", "strong resources", "agent research seeds"],
+	},
+	{
+		description: "Spotlight outcome dataset used by learning surfaces.",
+		id: "learning-spotlight-outcomes",
+		method: "GET",
+		path: "/api/learning/spotlight-outcomes",
+		useFor: ["outcome analysis", "attention-to-performance checks"],
+	},
+	{
+		description: "Attention distribution chart snapshot.",
+		id: "learning-attention-distribution",
+		method: "GET",
+		path: "/api/learning/attention-distribution",
+		useFor: ["24h distribution", "winner score", "attention share"],
+	},
+	{
+		description: "Neutral market metrics for arbitrary token addresses.",
+		id: "market-token-metrics",
+		method: "GET",
+		path: "/api/market/token-metrics?addresses=<address>",
+		useFor: ["token analysis", "liquidity checks", "market risk review"],
+	},
+];
 
 export type AgentContextToken = {
 	address: string;
@@ -18,7 +108,7 @@ export type AgentContextToken = {
 export type AgentContextTopic = {
 	attentionScore: number;
 	id: string;
-	mode: AgentContextMode;
+	mode: AttentionMode;
 	name: string;
 	netInflow1h: number;
 	netInflowTotal: number;
@@ -33,6 +123,7 @@ export type AgentContextTopic = {
 };
 
 export type AgentContextResponse = {
+	endpoints: string[];
 	freshness: {
 		generatedAt: string;
 		maxAgeSeconds: number;
@@ -40,18 +131,52 @@ export type AgentContextResponse = {
 	};
 	generatedAt: string;
 	recommendedPrompts: string[];
-	source: "fallback" | "live" | "unavailable";
+	source: "live" | "partial" | "unavailable";
 	spotlight: AgentContextTopic[];
 	topics: AgentContextTopic[];
-	topicsByMode: Partial<Record<AgentContextMode, AgentContextTopic[]>>;
+	topicsByMode: Partial<Record<AttentionMode, AgentContextTopic[]>>;
+};
+
+export type LearningTopicsParams = {
+	attentionTheme?: string | null;
+	page?: number | null;
+	pageSize?: number | null;
+	search?: string | null;
+	tokenAddress?: string | null;
+	topicType?: string | null;
+};
+
+export type SpotlightParams = {
+	historyLimit?: number | null;
+	limit?: number | null;
+	lookbackHours?: number | null;
+};
+
+export type TokenMetricsResponse = {
+	items?: Record<string, JsonObject>;
+	pendingAddresses?: string[];
+	rateLimitedUntil?: number | null;
+	solUsdPrice?: number | null;
 };
 
 export type AnimemeClient = {
+	fetchPublicPath: <T = unknown>(path: string) => Promise<T>;
 	getAgentContext: () => Promise<AgentContextResponse>;
+	getLearningAttentionDistribution: () => Promise<unknown>;
+	getLearningKeyResources: (bucket?: string) => Promise<unknown>;
+	getLearningSpotlightOutcomes: () => Promise<unknown>;
 	getLearningSummary: () => Promise<unknown>;
-	getLearningTopics: () => Promise<unknown>;
-	getNowAttentionFeed: () => Promise<NowAttentionFeedResponse>;
-	getSpotlight: () => Promise<unknown>;
+	getLearningTopic: (topicId: string) => Promise<unknown>;
+	getLearningTopics: (params?: LearningTopicsParams) => Promise<unknown>;
+	getNowAttentionFeed: (
+		modes?: readonly AttentionMode[],
+	) => Promise<NowAttentionFeedResponse>;
+	getSpotlight: (params?: SpotlightParams) => Promise<unknown>;
+	getSpotlightPerformanceNotifications: () => Promise<unknown>;
+	getSpotlightTopicSignals: (topicIds: readonly string[]) => Promise<unknown>;
+	getTokenMetrics: (
+		addresses: readonly string[],
+	) => Promise<TokenMetricsResponse>;
 };
 
 export type AnimemeClientOptions = {
@@ -60,8 +185,18 @@ export type AnimemeClientOptions = {
 	timeoutMs?: number;
 };
 
+type QueryValue =
+	| boolean
+	| null
+	| number
+	| readonly (boolean | number | string)[]
+	| string
+	| undefined;
+
+type QueryParams = Record<string, QueryValue>;
+
 type NowAttentionFeedResponse = {
-	boards?: Partial<Record<AgentContextMode, RawAttentionTopic[]>>;
+	boards?: Partial<Record<AttentionMode, RawAttentionTopic[]>>;
 	lastUpdatedAt?: number;
 };
 
@@ -105,27 +240,34 @@ export function createAnimemeClient(
 	options: AnimemeClientOptions = {},
 ): AnimemeClient {
 	const baseUrl = normalizeBaseUrl(
-		options.baseUrl || process.env.ANIMEME_API_BASE_URL || DEFAULT_ANIMEME_API_BASE_URL,
+		options.baseUrl ||
+			process.env.ANIMEME_API_BASE_URL ||
+			DEFAULT_ANIMEME_API_BASE_URL,
 	);
 	const fetchImpl = options.fetchImpl || fetch;
 	const timeoutMs = options.timeoutMs || 10_000;
 
-	const requestJson = async <T>(path: string) => {
+	const requestJson = async <T>(path: string, params: QueryParams = {}) => {
 		const controller = new AbortController();
 		const timeout = setTimeout(
 			() => controller.abort("Animeme request timeout"),
 			timeoutMs,
 		);
+		const url = buildUrl(baseUrl, normalizeApiPath(path), params);
 		try {
-			const response = await fetchImpl(new URL(path, baseUrl), {
+			const response = await fetchImpl(url, {
 				headers: {
 					accept: "application/json",
-					"user-agent": "Animeme-Agent/0.1",
+					"user-agent": "Animeme-Agent/0.2",
 				},
 				signal: controller.signal,
 			});
 			if (!response.ok) {
-				throw new Error(`${path} responded with ${response.status}`);
+				throw new Error(`${url.pathname} responded with ${response.status}`);
+			}
+			const contentType = response.headers.get("content-type") || "";
+			if (!contentType.toLowerCase().includes("application/json")) {
+				throw new Error(`${url.pathname} did not return JSON`);
 			}
 			return (await response.json()) as T;
 		} finally {
@@ -134,23 +276,54 @@ export function createAnimemeClient(
 	};
 
 	return {
+		fetchPublicPath: <T = unknown>(path: string) => requestJson<T>(path),
 		async getAgentContext() {
-			try {
-				return await requestJson<AgentContextResponse>("/api/agent/context");
-			} catch {
-				const fallback = await requestJson<NowAttentionFeedResponse>(
-					"/api/now-attention-feed?modes=rising,latest,viral",
-				);
-				return buildAgentContextFromNowAttentionFeed(fallback);
-			}
+			const feed = await requestJson<NowAttentionFeedResponse>(
+				"/api/now-attention-feed",
+				{ modes: DEFAULT_ATTENTION_MODES.join(",") },
+			);
+			return buildAgentContextFromNowAttentionFeed(feed);
 		},
+		getLearningAttentionDistribution: () =>
+			requestJson<unknown>("/api/learning/attention-distribution"),
+		getLearningKeyResources: (bucket = "bestPerformance") =>
+			requestJson<unknown>("/api/learning/key-resources", { bucket }),
+		getLearningSpotlightOutcomes: () =>
+			requestJson<unknown>("/api/learning/spotlight-outcomes"),
 		getLearningSummary: () => requestJson<unknown>("/api/learning/summary"),
-		getLearningTopics: () => requestJson<unknown>("/api/learning/topics"),
-		getNowAttentionFeed: () =>
-			requestJson<NowAttentionFeedResponse>(
-				"/api/now-attention-feed?modes=rising,latest,viral",
+		getLearningTopic: (topicId: string) =>
+			requestJson<unknown>(
+				`/api/learning/topics/${encodeURIComponent(topicId)}`,
 			),
-		getSpotlight: () => requestJson<unknown>("/api/spotlight"),
+		getLearningTopics: (params: LearningTopicsParams = {}) =>
+			requestJson<unknown>("/api/learning/topics", {
+				attentionTheme: params.attentionTheme,
+				page: params.page ?? 1,
+				pageSize: params.pageSize ?? 20,
+				search: params.search,
+				tokenAddress: params.tokenAddress,
+				topicType: params.topicType,
+			}),
+		getNowAttentionFeed: (modes = DEFAULT_ATTENTION_MODES) =>
+			requestJson<NowAttentionFeedResponse>("/api/now-attention-feed", {
+				modes: modes.join(","),
+			}),
+		getSpotlight: (params: SpotlightParams = {}) =>
+			requestJson<unknown>("/api/spotlight", {
+				historyLimit: params.historyLimit ?? 30,
+				limit: params.limit ?? 15,
+				lookbackHours: params.lookbackHours,
+			}),
+		getSpotlightPerformanceNotifications: () =>
+			requestJson<unknown>("/api/spotlight-performance-notifications"),
+		getSpotlightTopicSignals: (topicIds: readonly string[]) =>
+			requestJson<unknown>("/api/spotlight-topic-signals", {
+				topicIds: topicIds.join(","),
+			}),
+		getTokenMetrics: (addresses: readonly string[]) =>
+			requestJson<TokenMetricsResponse>("/api/market/token-metrics", {
+				addresses: addresses.join(","),
+			}),
 	};
 }
 
@@ -159,31 +332,39 @@ export function buildAgentContextFromNowAttentionFeed(
 ): AgentContextResponse {
 	const boards = payload.boards || {};
 	const topicsByMode = Object.fromEntries(
-		AGENT_CONTEXT_MODES.map((mode) => [
+		ATTENTION_MODES.map((mode) => [
 			mode,
 			(boards[mode] || [])
-				.slice(0, 12)
+				.slice(0, 18)
 				.map((topic, index) => toAgentTopic(topic, mode, index + 1)),
 		]),
 	) as AgentContextResponse["topicsByMode"];
 	const seen = new Set<string>();
-	const topics = AGENT_CONTEXT_MODES.flatMap((mode) => topicsByMode[mode] || [])
+	const topics = ATTENTION_MODES.flatMap((mode) => topicsByMode[mode] || [])
 		.filter((topic) => {
-			if (seen.has(topic.id)) {
+			const key = topic.id || topic.name.toLowerCase();
+			if (seen.has(key)) {
 				return false;
 			}
-			seen.add(topic.id);
+			seen.add(key);
 			return true;
 		})
-		.slice(0, 24);
+		.slice(0, 36);
 	const spotlight = [...topics]
 		.sort((left, right) => right.attentionScore - left.attentionScore)
-		.slice(0, 5);
+		.slice(0, 8);
 	const generatedAt = payload.lastUpdatedAt
 		? new Date(payload.lastUpdatedAt).toISOString()
 		: new Date().toISOString();
 
 	return {
+		endpoints: [
+			"/api/now-attention-feed",
+			"/api/spotlight",
+			"/api/learning/summary",
+			"/api/learning/topics",
+			"/api/market/token-metrics",
+		],
 		freshness: {
 			generatedAt,
 			maxAgeSeconds: 60,
@@ -191,12 +372,12 @@ export function buildAgentContextFromNowAttentionFeed(
 		},
 		generatedAt,
 		recommendedPrompts: [
-			"Scan rising topics and identify the strongest meme thesis.",
-			"Pick one topic and build a token launch watch plan.",
-			"Review risk for the hottest narrative before I act.",
-			"Turn current Animeme attention into three agent tasks.",
+			"Scan hot Animeme topics and identify the strongest meme thesis.",
+			"Analyze one token address against live attention and learning data.",
+			"Find new topics now, then write a risk checklist before acting.",
+			"Compare Attention Spotlight with the live rising/latest/viral boards.",
 		],
-		source: topics.length > 0 ? "fallback" : "unavailable",
+		source: topics.length > 0 ? "live" : "unavailable",
 		spotlight,
 		topics,
 		topicsByMode,
@@ -208,7 +389,12 @@ export function findTopic(
 	topicId?: string | null,
 ) {
 	if (topicId) {
-		const match = context.topics.find((topic) => topic.id === topicId);
+		const normalized = topicId.trim().toLowerCase();
+		const match = context.topics.find(
+			(topic) =>
+				topic.id.toLowerCase() === normalized ||
+				topic.name.toLowerCase() === normalized,
+		);
 		if (match) {
 			return match;
 		}
@@ -216,9 +402,34 @@ export function findTopic(
 	return context.spotlight[0] || context.topics[0] || null;
 }
 
+export function findTopicsByTokenAddress(
+	context: AgentContextResponse,
+	address: string,
+) {
+	const normalized = address.trim().toLowerCase();
+	if (!normalized) {
+		return [];
+	}
+	return context.topics.filter((topic) =>
+		topic.topTokens.some((token) => token.address.toLowerCase() === normalized),
+	);
+}
+
+export function rankHotTopics(context: AgentContextResponse, limit = 10) {
+	return [...context.topics]
+		.sort((left, right) => {
+			const scoreDiff = right.attentionScore - left.attentionScore;
+			if (scoreDiff !== 0) {
+				return scoreDiff;
+			}
+			return right.netInflow1h - left.netInflow1h;
+		})
+		.slice(0, limit);
+}
+
 function toAgentTopic(
 	topic: RawAttentionTopic,
-	mode: AgentContextMode,
+	mode: AttentionMode,
 	rank: number,
 ): AgentContextTopic {
 	const tokens = (topic.tokenList || [])
@@ -231,7 +442,7 @@ function toAgentTopic(
 		parseNumber(topic.topicNetInflow) ||
 		tokens.reduce((total, token) => total + token.netInflow1h, 0);
 	const marketCapScore = tokens
-		.slice(0, 3)
+		.slice(0, 4)
 		.reduce((total, token) => total + token.marketCap, 0);
 
 	return {
@@ -239,7 +450,8 @@ function toAgentTopic(
 			Math.max(0, netInflow1h) / 1_000 +
 				Math.max(0, marketCapScore) / 100_000 +
 				Math.max(0, tokens.length) * 4 +
-				(20 - Math.min(rank, 20)),
+				(24 - Math.min(rank, 24)) +
+				(mode === "rising" ? 8 : mode === "viral" ? 5 : 3),
 		),
 		id: topic.topicId || `${mode}-${rank}`,
 		mode,
@@ -259,9 +471,9 @@ function toAgentTopic(
 		tags: [...new Set([...(topic.topicTags || []), topic.type || ""])]
 			.map((tag) => tag.trim())
 			.filter(Boolean)
-			.slice(0, 6),
+			.slice(0, 8),
 		tokenCount: topic.tokenSize || tokens.length,
-		topTokens: tokens.slice(0, 4),
+		topTokens: tokens.slice(0, 6),
 		type: topic.type?.trim() || null,
 	};
 }
@@ -291,6 +503,29 @@ function getPrimaryLink(topic: RawAttentionTopic) {
 		}
 	}
 	return null;
+}
+
+function buildUrl(baseUrl: string, path: string, params: QueryParams) {
+	const url = new URL(path, baseUrl);
+	for (const [key, value] of Object.entries(params)) {
+		if (value == null || value === "") {
+			continue;
+		}
+		if (Array.isArray(value)) {
+			url.searchParams.set(key, value.map(String).join(","));
+			continue;
+		}
+		url.searchParams.set(key, String(value));
+	}
+	return url;
+}
+
+function normalizeApiPath(value: string) {
+	const normalized = value.trim();
+	if (!normalized.startsWith("/api/")) {
+		throw new Error("Only Animeme public API paths under /api/ are allowed.");
+	}
+	return normalized;
 }
 
 function parseNumber(value: number | string | null | undefined) {

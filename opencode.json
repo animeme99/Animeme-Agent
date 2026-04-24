@@ -9,8 +9,17 @@
 				"webfetch": "allow",
 				"bash": {
 					"*": "ask",
+					"npm run catalog*": "allow",
+					"npm run fetch*": "allow",
+					"npm run hot*": "allow",
+					"npm run learning*": "allow",
+					"npm run new*": "allow",
 					"npm run scan*": "allow",
+					"npm run spotlight*": "allow",
 					"npm run thesis*": "allow",
+					"npm run token*": "allow",
+					"npm run topic*": "allow",
+					"npm run topics*": "allow",
 					"npm run risk*": "allow",
 					"npm run watch*": "allow",
 					"npm run typecheck": "allow"

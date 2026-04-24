@@ -8,8 +8,17 @@
 		"node": ">=20"
 	},
 	"scripts": {
+		"catalog": "tsx src/cli.ts catalog",
+		"fetch": "tsx src/cli.ts fetch",
+		"hot": "tsx src/cli.ts hot",
+		"learning": "tsx src/cli.ts learning",
+		"new": "tsx src/cli.ts new",
 		"scan": "tsx src/cli.ts scan",
+		"spotlight": "tsx src/cli.ts spotlight",
 		"thesis": "tsx src/cli.ts thesis",
+		"token": "tsx src/cli.ts token",
+		"topic": "tsx src/cli.ts topic",
+		"topics": "tsx src/cli.ts topics",
 		"risk": "tsx src/cli.ts risk",
 		"watch": "tsx src/cli.ts watch",
 		"typecheck": "tsc --noEmit"

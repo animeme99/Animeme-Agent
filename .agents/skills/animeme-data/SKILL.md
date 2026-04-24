@@ -1,6 +1,6 @@
 ---
 name: animeme-data
-description: Use live public Animeme data to scan attention, build topic theses, review risk, and create watchlist artifacts for Codex, Claude Code, and OpenCode.
+description: Use live public Animeme data to scan trends, analyze tokens, inspect Attention Spotlight, query learning data, and publish advisory artifacts for Codex, Claude Code, and OpenCode.
 ---
 
 # Animeme Data
@@ -10,7 +10,9 @@ public data.
 
 ## Scope
 
-- Read live context from `https://animeme.app`.
+- Read live public context from `https://animeme.app`.
+- Access current trend boards, new topics, Attention Spotlight, learning data,
+  and neutral market metrics for arbitrary token addresses.
 - Prefer the CLI commands in this repo before inventing new fetch flows.
 - Create advisory JSON and Markdown artifacts under `artifacts/`.
 - Never trade, sign transactions, request private keys, or mutate production
@@ -19,7 +21,26 @@ public data.
 ## Fast Path
 
 ```bash
+npm run catalog
 npm run scan
+npm run token -- --address <token-address>
+npm run spotlight
+npm run learning
+```
+
+## Data Commands
+
+```bash
+npm run hot -- --limit 20
+npm run new -- --mode latest
+npm run topics -- --search <query>
+npm run topic -- --topic <topic-id>
+npm run fetch -- --path /api/learning/topics?pageSize=5
+```
+
+## Artifact Commands
+
+```bash
 npm run thesis -- --topic <topic-id>
 npm run risk -- --topic <topic-id>
 npm run watch -- --topic <topic-id>
@@ -27,13 +48,28 @@ npm run watch -- --topic <topic-id>
 
 ## Workflow
 
-1. Run `npm run scan` to get the current Animeme context.
-2. Pick the topic with the clearest combination of attention score, flow,
-   market cap movement, and narrative clarity.
-3. Use `thesis` when the user needs a tradeable story explanation.
-4. Use `risk` when the user needs invalidation, crowding, or fake-signal checks.
-5. Use `watch` when the user needs local monitoring criteria.
-6. Keep all outputs advisory and timestamped.
+1. Run `npm run catalog` when you need to know which public data surface fits
+   the task.
+2. Run `npm run scan` to get the current live attention context.
+3. Use `token` for arbitrary token address analysis.
+4. Use `spotlight` when the user asks what Attention Spotlight is showing.
+5. Use `learning`, `topics`, or `topic` when the user asks for historic lessons
+   or narrative research.
+6. Use `thesis`, `risk`, and `watch` to turn a selected topic into an advisory
+   artifact.
+7. Keep all outputs advisory, timestamped, and local.
+
+## Interpretation Rules
+
+- Strong trend means a topic is visible in live boards and has enough flow,
+  token surface, or Spotlight context to justify more research.
+- New topic means it appears on the latest board or recently entered learning
+  data.
+- Token analysis should combine live topic matches, neutral market metrics, and
+  learning archive matches.
+- Missing data is not bullish. State what is missing and keep the item in
+  observation mode.
+- Do not expose or depend on private provider names in user-facing artifacts.
 
 ## Memory
 
