@@ -1,0 +1,21 @@
+{
+	"$schema": "https://opencode.ai/config.json",
+	"agent": {
+		"animeme": {
+			"mode": "primary",
+			"prompt": "{file:./AGENTS.md}",
+			"permission": {
+				"edit": "ask",
+				"webfetch": "allow",
+				"bash": {
+					"*": "ask",
+					"npm run scan*": "allow",
+					"npm run thesis*": "allow",
+					"npm run risk*": "allow",
+					"npm run watch*": "allow",
+					"npm run typecheck": "allow"
+				}
+			}
+		}
+	}
+}

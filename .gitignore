@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+artifacts/*.json
+artifacts/*.md
+!artifacts/.gitkeep
+memory/*.md
+!memory/README.md

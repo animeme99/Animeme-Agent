@@ -1,0 +1,22 @@
+{
+	"name": "animeme-agent",
+	"version": "0.1.0",
+	"description": "Cloneable read-only agent kit for scouting Animeme public attention data.",
+	"type": "module",
+	"private": false,
+	"engines": {
+		"node": ">=20"
+	},
+	"scripts": {
+		"scan": "tsx src/cli.ts scan",
+		"thesis": "tsx src/cli.ts thesis",
+		"risk": "tsx src/cli.ts risk",
+		"watch": "tsx src/cli.ts watch",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.2",
+		"tsx": "^4.21.0",
+		"typescript": "^5.7.2"
+	}
+}
