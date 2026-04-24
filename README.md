@@ -33,18 +33,30 @@ npm run watch -- --topic <topic-id>
 
 Outputs are written into `artifacts/` as JSON and Markdown.
 
+## Agent Skill
+
+This repo intentionally ships one umbrella skill:
+
+```text
+.agents/skills/animeme-data/SKILL.md
+```
+
+The `animeme-data` skill covers live scans, topic thesis work, risk review,
+watchlists, and artifact publishing. Agents should use this one skill for all
+public Animeme data workflows.
+
 ## Agent Tool Compatibility
 
 Codex:
 
 ```bash
-codex "Use AGENTS.md and run npm run scan, then write a thesis artifact."
+codex "Use AGENTS.md, load the animeme-data skill, run npm run scan, then write a thesis artifact."
 ```
 
 Claude Code:
 
 ```bash
-claude "Read CLAUDE.md, run npm run scan, then use the trend-scout skill."
+claude "Read CLAUDE.md, load the animeme-data skill, run npm run scan, then write a risk review."
 ```
 
 OpenCode:
@@ -53,7 +65,7 @@ OpenCode:
 opencode
 ```
 
-OpenCode will read `opencode.json` and discover `.agents/skills/*/SKILL.md`.
+OpenCode will read `opencode.json` and discover the `animeme-data` skill.
 
 ## Public Data Contract
 

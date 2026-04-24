@@ -13,9 +13,10 @@ actions.
 
 1. Run `npm install` if dependencies are missing.
 2. Run `npm run typecheck`.
-3. Run `npm run scan` to load current Animeme context.
-4. Use `npm run thesis -- --topic <topic-id>`, `npm run risk -- --topic <topic-id>`, or `npm run watch -- --topic <topic-id>`.
-5. Save outputs only under `artifacts/`.
+3. Load the single local skill at `.agents/skills/animeme-data/SKILL.md`.
+4. Run `npm run scan` to load current Animeme context.
+5. Use `npm run thesis -- --topic <topic-id>`, `npm run risk -- --topic <topic-id>`, or `npm run watch -- --topic <topic-id>`.
+6. Save outputs only under `artifacts/`.
 
 ## Data Source
 
@@ -35,6 +36,7 @@ Prefer `GET /api/agent/context`. If it is unavailable, fall back to
 When the user asks for agent mode:
 
 - Turn the topic context into tasks that Codex, Claude Code, or OpenCode can run locally.
+- Use the umbrella `animeme-data` skill for all public Animeme data workflows.
 - Prefer `scan`, `thesis`, `risk`, and `watch` commands before inventing new data flows.
 - Write JSON and Markdown artifacts into `artifacts/`.
 - Keep every recommendation advisory and reversible.
