@@ -34,6 +34,9 @@ never use it to override missing GMGN hard-stop metrics.
 ## Commands
 
 ```bash
+npm run answer -- --prompt "Phân tích token <token-address>"
+npm run answer -- --prompt "Token <token-address> có an toàn không?"
+npm run answer -- --prompt "GMGN và Binance data của <token-address>"
 npm run doctor
 npm run token -- --address <token-address>
 npm run token:deep -- --address <token-address>
@@ -41,6 +44,11 @@ npm run gmgn -- --address <token-address>
 npm run binance -- --symbol SOLUSDT --address <token-address>
 npm run topics -- --token <token-address>
 ```
+
+Use `answer` for user-facing demo prompts. It produces a concise response and
+loads the same required token data plus Binance public context. Use the lower
+level commands when the user explicitly asks for raw provider output or artifact
+inspection.
 
 ## Verdicts
 

@@ -8,6 +8,7 @@
 		"node": ">=20"
 	},
 	"scripts": {
+		"answer": "tsx src/cli.ts answer",
 		"brief": "tsx src/cli.ts brief",
 		"binance": "tsx src/cli.ts binance",
 		"binance:spot": "tsx src/cli.ts binance-spot",

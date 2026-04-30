@@ -25,6 +25,9 @@ actions.
 7. Run `npm run demo` for one full public ANIMEME context bundle.
 8. Run `npm run scan` for focused current attention.
 9. Use the most specific command for the task:
+   - `npm run answer -- --prompt "Trending Narrative hiện là gì?"`
+   - `npm run answer -- --prompt "Narrative <name> nói về cái gì?"`
+   - `npm run answer -- --prompt "Phân tích token <token-address>"`
    - `npm run brief`
    - `npm run token -- --address <token-address>`
    - `npm run token:deep -- --address <token-address>`
@@ -39,6 +42,32 @@ actions.
    - `npm run risk -- --topic <topic-id>`
    - `npm run watch -- --topic <topic-id>`
 10. Save outputs only under `artifacts/`.
+
+## Natural-Language Prompt Router
+
+For demo prompts and normal user questions, prefer `npm run answer -- --prompt
+"<question>"` first. It routes:
+
+If the local npm shell strips `--prompt`, use `npm run answer -- "<question>"`.
+
+- `Phân tích token X`, `Token X có an toàn không?`, `Analyze token X`:
+  Animeme Now Attention + Narrative Learning + direct GMGN API-key metrics +
+  Animeme fallback metrics + Binance public Spot/Web3 context.
+- `Trending Narrative hiện là gì?`, `What is hot now?`, `Topic nào đang rising?`:
+  live Now Attention ranking and follow-up prompts.
+- `Narrative X nói về cái gì?`, `Explain narrative X`, `What is X about?`:
+  live topic match + Narrative Learning search + Spotlight signal keys.
+- `Attention Spotlight đang highlight gì?`, `What is Spotlight showing?`:
+  current Spotlight preview and recent performance notifications.
+- `GMGN và Binance data của X`, `Show provider data for X`:
+  separate Animeme, GMGN, and Binance source sections.
+- `check setup`, `doctor`, `kiểm tra cài đặt`:
+  doctor readiness report.
+
+Respond in the user's language when possible. For Vietnamese demo prompts,
+produce a concise Vietnamese answer with clear sections: quick conclusion, data
+sources used, signal read, warnings/hard stops, and next prompt. Never turn an
+Animeme score into financial advice.
 
 ## New User Guide
 
@@ -99,6 +128,8 @@ in `src/gmgn-client.ts`, the Binance public client is in
 
 ## Command Map
 
+- `npm run answer -- --prompt "<question>"`: natural-language router for demo
+  prompts and user questions.
 - `npm run doctor`: verify local runtime and public ANIMEME API reachability.
 - `npm run demo`: one-command first-run bundle for new users.
 - `npm run brief`: daily public context bundle across attention, spotlight, and learning.

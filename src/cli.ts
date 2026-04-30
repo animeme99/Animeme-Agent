@@ -38,12 +38,32 @@ type ParsedArgs = {
 	positionals: string[];
 };
 
+type AnswerRoute =
+	| "doctor"
+	| "help"
+	| "narrative"
+	| "provider"
+	| "spotlight"
+	| "token"
+	| "trending";
+
 type ArtifactPayload = {
 	address?: string;
 	contextGeneratedAt?: string;
 	createdAt: string;
 	kind: string;
+	prompt?: string;
 	symbol?: string;
+	topic?: AgentContextTopic | null;
+};
+
+type PromptAnswerResult = {
+	address?: string;
+	createdAt: string;
+	markdown: string;
+	payload: Record<string, unknown>;
+	prompt: string;
+	route: AnswerRoute;
 	topic?: AgentContextTopic | null;
 };
 
@@ -89,6 +109,20 @@ type TokenMetricDiagnostics = {
 		missingFields: string[];
 		status: MetricSourceStatus;
 	};
+};
+
+type TokenAnalysisBundle = {
+	address: string;
+	animemeMetrics: TokenMetricsResponse | null;
+	attentionTopics: AgentContextTopic[];
+	context: AgentContextResponse | null;
+	deep: boolean;
+	gmgnMetrics: TokenMetricsResponse | null;
+	learning: unknown;
+	metricDiagnostics: TokenMetricDiagnostics;
+	metrics: TokenMetricsResponse | null;
+	report: TokenIntelligenceReport;
+	warnings: string[];
 };
 
 const REQUIRED_GMGN_METRIC_FIELDS = [
@@ -137,6 +171,22 @@ async function main() {
 			});
 			await writeFile(artifact.markdownPath, markdown, "utf8");
 			console.log(markdown);
+			console.log(`\nArtifacts written: ${artifact.markdownPath}, ${artifact.jsonPath}`);
+			return;
+		}
+		case "answer": {
+			const answer = await buildPromptAnswer(client, args);
+			const artifact = await writeArtifacts("answer", {
+				...answer.payload,
+				address: answer.address,
+				createdAt: answer.createdAt,
+				kind: "answer",
+				prompt: answer.prompt,
+				route: answer.route,
+				topic: answer.topic,
+			});
+			await writeFile(artifact.markdownPath, answer.markdown, "utf8");
+			console.log(answer.markdown);
 			console.log(`\nArtifacts written: ${artifact.markdownPath}, ${artifact.jsonPath}`);
 			return;
 		}
@@ -288,80 +338,20 @@ async function main() {
 		case "token-deep": {
 			const address = readRequiredFlagOrPosition(args, "address", 0);
 			const deep = command === "token-deep" || Boolean(args.flags.deep);
-			const gmgnCredential = getGmgnCredentialState();
-			const [contextResult, gmgnMetricsResult, animemeMetricsResult, learningResult] =
-				await Promise.allSettled([
-					client.getAgentContext(),
-					getDirectGmgnTokenMetrics([address]),
-					client.getTokenMetrics([address]),
-					client.getLearningTopics({
-						pageSize: 10,
-						tokenAddress: address,
-					}),
-				]);
-			const context =
-				contextResult.status === "fulfilled" ? contextResult.value : null;
-			const gmgnMetrics =
-				gmgnMetricsResult.status === "fulfilled" ? gmgnMetricsResult.value : null;
-			const animemeMetrics =
-				animemeMetricsResult.status === "fulfilled"
-					? animemeMetricsResult.value
-					: null;
-			const metrics = mergeTokenMetrics(address, gmgnMetrics, animemeMetrics);
-			const metricDiagnostics = buildTokenMetricDiagnostics({
-				address,
-				animemeMetrics,
-				animemeMetricsResult,
-				gmgnCredential,
-				gmgnMetrics,
-				gmgnMetricsResult,
-			});
-			const learning =
-				learningResult.status === "fulfilled" ? learningResult.value : null;
-			const attentionTopics = context
-				? findTopicsByTokenAddress(context, address)
-				: [];
-			const learningItems = extractItems(learning);
-			const report = applyTokenMetricRequirement(
-				buildTokenIntelligenceReport({
-					address,
-					attentionTopics,
-					learningItems,
-					metrics,
-				}),
-				metricDiagnostics,
-				deep,
-			);
-			const markdown = renderTokenMarkdown({
-				address,
-				animemeMetrics,
-				attentionTopics,
-				context,
-				deep,
-				gmgnMetrics,
-				learning,
-				metricDiagnostics,
-				metrics,
-				report,
-				warnings: collectSettledWarnings({
-					animemeMarket: animemeMetricsResult,
-					context: contextResult,
-					gmgnMetrics: gmgnMetricsResult,
-					learning: learningResult,
-				}),
-			});
+			const analysis = await loadTokenAnalysis(client, address, deep);
+			const markdown = renderTokenMarkdown(analysis);
 			const artifact = await writeArtifacts("token", {
 				address,
-				animemeMetrics,
-				attentionTopics,
-				contextGeneratedAt: context?.generatedAt,
+				animemeMetrics: analysis.animemeMetrics,
+				attentionTopics: analysis.attentionTopics,
+				contextGeneratedAt: analysis.context?.generatedAt,
 				createdAt: new Date().toISOString(),
-				gmgnMetrics,
+				gmgnMetrics: analysis.gmgnMetrics,
 				kind: command,
-				learning,
-				metricDiagnostics,
-				metrics,
-				report,
+				learning: analysis.learning,
+				metricDiagnostics: analysis.metricDiagnostics,
+				metrics: analysis.metrics,
+				report: analysis.report,
 			});
 			await writeFile(artifact.markdownPath, markdown, "utf8");
 			console.log(markdown);
@@ -552,6 +542,382 @@ function renderCatalogMarkdown() {
 		"",
 		...BINANCE_SPOT_PUBLIC_PATHS.map((entry) => `- ${entry}`),
 	].join("\n");
+}
+
+async function buildPromptAnswer(
+	client: AnimemeClient,
+	args: ParsedArgs,
+): Promise<PromptAnswerResult> {
+	const createdAt = new Date().toISOString();
+	const prompt = readPrompt(args);
+	const route = prompt ? detectAnswerRoute(prompt) : "help";
+
+	if (!prompt || route === "help") {
+		return buildHelpPromptAnswer(prompt || "help", createdAt);
+	}
+
+	if (route === "doctor") {
+		const report = await runDoctor(client);
+		return {
+			createdAt,
+			markdown: renderDoctorMarkdown(report),
+			payload: {
+				report,
+			},
+			prompt,
+			route,
+		};
+	}
+
+	if (route === "trending") {
+		return buildTrendingPromptAnswer(client, prompt, createdAt);
+	}
+
+	if (route === "spotlight") {
+		return buildSpotlightPromptAnswer(client, args, prompt, createdAt);
+	}
+
+	if (route === "narrative") {
+		const query = extractNarrativeQuery(prompt);
+		if (!query) {
+			return buildTrendingPromptAnswer(client, prompt, createdAt);
+		}
+		return buildNarrativePromptAnswer(client, prompt, query, createdAt);
+	}
+
+	const address =
+		extractSolanaAddress(prompt) ||
+		readStringFlag(args, "address") ||
+		readStringFlag(args, "token");
+	if (!address) {
+		return buildMissingAddressPromptAnswer(prompt, route, createdAt);
+	}
+
+	if (route === "provider") {
+		return buildProviderPromptAnswer(client, args, prompt, address, createdAt);
+	}
+
+	return buildTokenPromptAnswer(client, args, prompt, address, createdAt);
+}
+
+async function buildTokenPromptAnswer(
+	client: AnimemeClient,
+	args: ParsedArgs,
+	prompt: string,
+	address: string,
+	createdAt: string,
+): Promise<PromptAnswerResult> {
+	const symbol = readStringFlag(args, "symbol") || "SOLUSDT";
+	const [analysis, binanceBundle] = await Promise.all([
+		loadTokenAnalysis(client, address, true),
+		settleOptional(() =>
+			getBinanceMarketBundle({
+				address,
+				limit: readNumberFlag(args, "limit", 50),
+				symbol,
+			}),
+		),
+	]);
+	const markdown = renderTokenPromptAnswerMarkdown({
+		analysis,
+		binanceBundle,
+		createdAt,
+		prompt,
+		symbol,
+	});
+	return {
+		address,
+		createdAt,
+		markdown,
+		payload: {
+			analysis,
+			binanceBundle,
+			symbol,
+		},
+		prompt,
+		route: "token",
+		topic: analysis.attentionTopics[0] || null,
+	};
+}
+
+async function buildTrendingPromptAnswer(
+	client: AnimemeClient,
+	prompt: string,
+	createdAt: string,
+): Promise<PromptAnswerResult> {
+	const context = await client.getAgentContext();
+	const topics = rankHotTopics(context, 8);
+	const markdown = renderTrendingPromptAnswerMarkdown({
+		context,
+		createdAt,
+		prompt,
+		topics,
+	});
+	return {
+		createdAt,
+		markdown,
+		payload: {
+			contextGeneratedAt: context.generatedAt,
+			topics,
+		},
+		prompt,
+		route: "trending",
+		topic: topics[0] || null,
+	};
+}
+
+async function buildSpotlightPromptAnswer(
+	client: AnimemeClient,
+	args: ParsedArgs,
+	prompt: string,
+	createdAt: string,
+): Promise<PromptAnswerResult> {
+	const [spotlight, notifications] = await Promise.all([
+		client.getSpotlight({
+			historyLimit: readNumberFlag(args, "history-limit", 30),
+			limit: readNumberFlag(args, "limit", 15),
+		}),
+		settleOptional(() => client.getSpotlightPerformanceNotifications()),
+	]);
+	const markdown = renderSpotlightPromptAnswerMarkdown({
+		createdAt,
+		notifications,
+		prompt,
+		spotlight,
+	});
+	return {
+		createdAt,
+		markdown,
+		payload: {
+			notifications,
+			spotlight,
+		},
+		prompt,
+		route: "spotlight",
+	};
+}
+
+async function buildNarrativePromptAnswer(
+	client: AnimemeClient,
+	prompt: string,
+	query: string,
+	createdAt: string,
+): Promise<PromptAnswerResult> {
+	const [contextResult, learningResult] = await Promise.allSettled([
+		client.getAgentContext(),
+		client.getLearningTopics({
+			pageSize: 8,
+			search: query,
+		}),
+	]);
+	const context =
+		contextResult.status === "fulfilled" ? contextResult.value : null;
+	const liveTopic = context ? findLiveTopicByQuery(context, query) : null;
+	const signals = liveTopic
+		? await settleOptional(() => client.getSpotlightTopicSignals([liveTopic.id]))
+		: null;
+	const learning =
+		learningResult.status === "fulfilled" ? learningResult.value : null;
+	const markdown = renderNarrativePromptAnswerMarkdown({
+		context,
+		createdAt,
+		learning,
+		liveTopic,
+		prompt,
+		query,
+		signals,
+		warnings: collectSettledWarnings({
+			context: contextResult,
+			learning: learningResult,
+		}),
+	});
+	return {
+		createdAt,
+		markdown,
+		payload: {
+			contextGeneratedAt: context?.generatedAt,
+			learning,
+			query,
+			signals,
+			warnings: collectSettledWarnings({
+				context: contextResult,
+				learning: learningResult,
+			}),
+		},
+		prompt,
+		route: "narrative",
+		topic: liveTopic,
+	};
+}
+
+async function buildProviderPromptAnswer(
+	client: AnimemeClient,
+	args: ParsedArgs,
+	prompt: string,
+	address: string,
+	createdAt: string,
+): Promise<PromptAnswerResult> {
+	const symbol = readStringFlag(args, "symbol") || "SOLUSDT";
+	const [contextResult, gmgnMetricsResult, animemeMetricsResult, binanceResult] =
+		await Promise.allSettled([
+			client.getAgentContext(),
+			getDirectGmgnTokenMetrics([address]),
+			client.getTokenMetrics([address]),
+			getBinanceMarketBundle({
+				address,
+				limit: readNumberFlag(args, "limit", 50),
+				symbol,
+			}),
+		]);
+	const context =
+		contextResult.status === "fulfilled" ? contextResult.value : null;
+	const gmgnMetrics =
+		gmgnMetricsResult.status === "fulfilled" ? gmgnMetricsResult.value : null;
+	const animemeMetrics =
+		animemeMetricsResult.status === "fulfilled"
+			? animemeMetricsResult.value
+			: null;
+	const binanceBundle =
+		binanceResult.status === "fulfilled" ? binanceResult.value : null;
+	const markdown = renderProviderPromptAnswerMarkdown({
+		address,
+		animemeMetrics,
+		binanceBundle,
+		binanceError:
+			binanceResult.status === "rejected"
+				? formatSettledReason(binanceResult.reason)
+				: null,
+		context,
+		createdAt,
+		gmgnMetrics,
+		gmgnMetricsError:
+			gmgnMetricsResult.status === "rejected"
+				? formatSettledReason(gmgnMetricsResult.reason)
+				: null,
+		prompt,
+		symbol,
+	});
+	return {
+		address,
+		createdAt,
+		markdown,
+		payload: {
+			animemeMetrics,
+			binanceBundle,
+			contextGeneratedAt: context?.generatedAt,
+			gmgnMetrics,
+			symbol,
+		},
+		prompt,
+		route: "provider",
+	};
+}
+
+function buildHelpPromptAnswer(
+	prompt: string,
+	createdAt: string,
+): PromptAnswerResult {
+	return {
+		createdAt,
+		markdown: renderPromptHelpMarkdown(createdAt),
+		payload: {},
+		prompt,
+		route: "help",
+	};
+}
+
+function buildMissingAddressPromptAnswer(
+	prompt: string,
+	route: AnswerRoute,
+	createdAt: string,
+): PromptAnswerResult {
+	return {
+		createdAt,
+		markdown: [
+			"# Animeme Prompt Answer",
+			"",
+			`Generated: ${createdAt}`,
+			`Prompt: ${prompt}`,
+			"",
+			"Thiếu token address. Hãy gửi lại theo một trong các mẫu:",
+			"",
+			"- `Phân tích token <solana-token-address>`",
+			"- `Token <solana-token-address> có an toàn không?`",
+			"- `GMGN và Binance data của <solana-token-address>`",
+			"",
+			"Repo này không đoán contract address từ ticker, vì ticker có thể trùng hoặc giả mạo.",
+		].join("\n"),
+		payload: {},
+		prompt,
+		route,
+	};
+}
+
+async function loadTokenAnalysis(
+	client: AnimemeClient,
+	address: string,
+	deep: boolean,
+): Promise<TokenAnalysisBundle> {
+	const gmgnCredential = getGmgnCredentialState();
+	const [contextResult, gmgnMetricsResult, animemeMetricsResult, learningResult] =
+		await Promise.allSettled([
+			client.getAgentContext(),
+			getDirectGmgnTokenMetrics([address]),
+			client.getTokenMetrics([address]),
+			client.getLearningTopics({
+				pageSize: 10,
+				tokenAddress: address,
+			}),
+		]);
+	const context =
+		contextResult.status === "fulfilled" ? contextResult.value : null;
+	const gmgnMetrics =
+		gmgnMetricsResult.status === "fulfilled" ? gmgnMetricsResult.value : null;
+	const animemeMetrics =
+		animemeMetricsResult.status === "fulfilled"
+			? animemeMetricsResult.value
+			: null;
+	const metrics = mergeTokenMetrics(address, gmgnMetrics, animemeMetrics);
+	const metricDiagnostics = buildTokenMetricDiagnostics({
+		address,
+		animemeMetrics,
+		animemeMetricsResult,
+		gmgnCredential,
+		gmgnMetrics,
+		gmgnMetricsResult,
+	});
+	const learning =
+		learningResult.status === "fulfilled" ? learningResult.value : null;
+	const attentionTopics = context ? findTopicsByTokenAddress(context, address) : [];
+	const learningItems = extractItems(learning);
+	const report = applyTokenMetricRequirement(
+		buildTokenIntelligenceReport({
+			address,
+			attentionTopics,
+			learningItems,
+			metrics,
+		}),
+		metricDiagnostics,
+		deep,
+	);
+	return {
+		address,
+		animemeMetrics,
+		attentionTopics,
+		context,
+		deep,
+		gmgnMetrics,
+		learning,
+		metricDiagnostics,
+		metrics,
+		report,
+		warnings: collectSettledWarnings({
+			animemeMarket: animemeMetricsResult,
+			context: contextResult,
+			gmgnMetrics: gmgnMetricsResult,
+			learning: learningResult,
+		}),
+	};
 }
 
 async function runDoctor(client: AnimemeClient) {
@@ -1191,6 +1557,341 @@ function renderTokenMarkdown(options: {
 		...(options.warnings.length
 			? ["## Warnings", "", ...options.warnings.map((warning) => `- ${warning}`)]
 			: []),
+		].join("\n");
+}
+
+function renderTokenPromptAnswerMarkdown(options: {
+	analysis: TokenAnalysisBundle;
+	binanceBundle: BinanceMarketBundle | OptionalFailure;
+	createdAt: string;
+	prompt: string;
+	symbol: string;
+}) {
+	const { analysis } = options;
+	const metric = findMetricForAddress(analysis.metrics, analysis.address);
+	const topTopic = analysis.attentionTopics[0] || null;
+	const report = analysis.report;
+	const verdictText = translateVerdict(report.verdict);
+	const binanceLines = renderBinancePromptLines(
+		options.binanceBundle,
+		options.symbol,
+	);
+	return [
+		`# Phân tích token: ${analysis.address}`,
+		"",
+		`Generated: ${options.createdAt}`,
+		`Prompt: ${options.prompt}`,
+		"",
+		"## Kết luận nhanh",
+		"",
+		`- Verdict: ${report.verdict} - ${verdictText}.`,
+		`- Score: ${report.score}/100, confidence ${translateConfidence(report.confidence)}.`,
+		topTopic
+			? `- Narrative match mạnh nhất: ${topTopic.name} (${topTopic.mode} #${topTopic.rank}, score ${topTopic.attentionScore}, ${formatUsd(topTopic.netInflow1h)} 1h inflow).`
+			: "- Chưa thấy token này gắn với live Now Attention topic; coi đây là thiếu tín hiệu, không phải điểm cộng.",
+		"- Đây là research context, không phải tín hiệu mua/bán.",
+		"",
+		"## Dữ liệu đã dùng",
+		"",
+		analysis.context
+			? `- Animeme Now Attention: loaded (${analysis.context.source}, ${analysis.context.topics.length} topics, generated ${analysis.context.generatedAt}).`
+			: "- Animeme Now Attention: unavailable, thiếu live trend context.",
+		`- GMGN API-key metrics: ${formatGmgnMetricStatus(
+			analysis.metricDiagnostics,
+			analysis.gmgnMetrics,
+			analysis.address,
+		)}`,
+		`- Animeme market fallback: ${formatAnimemeMarketStatus(
+			analysis.metricDiagnostics,
+			analysis.animemeMetrics,
+			analysis.address,
+		)}`,
+		...binanceLines,
+		"",
+		"## Vì sao đáng chú ý",
+		"",
+		...(report.strengths.length
+			? report.strengths.map((item) => `- ${translateReportLine(item)}`)
+			: ["- Chưa có strength đủ rõ từ dữ liệu hiện có."]),
+		"",
+		"## Cảnh báo và hard stops",
+		"",
+		...(report.warnings.length
+			? report.warnings.map((item) => `- Warning: ${translateReportLine(item)}`)
+			: ["- Không có warning lớn từ dữ liệu đã load, nhưng vẫn cần theo dõi liquidity, holder, và live narrative."]),
+		...(report.hardStops.length
+			? report.hardStops.map((item) => `- Hard stop: ${translateReportLine(item)}`)
+			: ["- Hard stop: chưa có hard stop từ các field GMGN/Animeme đã load."]),
+		"",
+		"## GMGN market snapshot",
+		"",
+		...(metric
+			? renderMetricLines(metric)
+			: [
+					"- Chưa có structured GMGN/Animeme metric cho token này; không được coi hard-stop là đã clear.",
+				]),
+		"",
+		"## Next prompts cho demo",
+		"",
+		topTopic
+			? `- \`Narrative ${topTopic.name} nói về cái gì?\``
+			: "- `Trending Narrative hiện là gì?`",
+		`- \`GMGN và Binance data của ${analysis.address}\``,
+		`- \`Token ${analysis.address} có an toàn không?\``,
+		"",
+		...(analysis.warnings.length
+			? ["## Request warnings", "", ...analysis.warnings.map((warning) => `- ${warning}`)]
+			: []),
+	].join("\n");
+}
+
+function renderTrendingPromptAnswerMarkdown(options: {
+	context: AgentContextResponse;
+	createdAt: string;
+	prompt: string;
+	topics: AgentContextTopic[];
+}) {
+	const topTopic = options.topics[0] || null;
+	return [
+		"# Trending Narrative hiện tại",
+		"",
+		`Generated: ${options.createdAt}`,
+		`Prompt: ${options.prompt}`,
+		`Attention context: ${options.context.generatedAt}`,
+		"",
+		"## Trả lời ngắn",
+		"",
+		topTopic
+			? `Narrative mạnh nhất hiện tại là **${topTopic.name}**: ${topTopic.mode} #${topTopic.rank}, score ${topTopic.attentionScore}, ${formatUsd(topTopic.netInflow1h)} net inflow 1h.`
+			: "Chưa có narrative đủ rõ trong live Now Attention payload.",
+		topTopic?.summary
+			? `Tóm tắt: ${topTopic.summary}`
+			: "Tóm tắt: chưa có summary đủ rõ từ payload.",
+		"",
+		"## Top narratives",
+		"",
+		...(options.topics.length
+			? options.topics.map((topic, index) => {
+					const lead = topic.topTokens[0];
+					const leadText = lead?.address
+						? `${lead.symbol} (${formatUsd(lead.marketCap)} mcap, ${formatUsd(lead.liquidity)} liq)`
+						: "no lead token";
+					return `${index + 1}. ${topic.name} - ${topic.mode} #${topic.rank}, score ${topic.attentionScore}, ${formatUsd(topic.netInflow1h)} 1h inflow, lead ${leadText}.`;
+				})
+			: ["- No live topics available."]),
+		"",
+		"## Cách đọc",
+		"",
+		"- Trending trong Animeme nghĩa là attention đang legible trên Now Attention, chưa phải tín hiệu mua.",
+		"- Ưu tiên topic có summary rõ, inflow còn tăng, token surface thật, và không bị holder/insider hard-stop khi phân tích token.",
+		"",
+		"## Next prompts cho demo",
+		"",
+		topTopic
+			? `- \`Narrative ${topTopic.name} nói về cái gì?\``
+			: "- `Narrative <name> nói về cái gì?`",
+		topTopic?.topTokens[0]?.address
+			? `- \`Phân tích token ${topTopic.topTokens[0].address}\``
+			: "- `Phân tích token <solana-token-address>`",
+		"- `Attention Spotlight đang highlight gì?`",
+	].join("\n");
+}
+
+function renderSpotlightPromptAnswerMarkdown(options: {
+	createdAt: string;
+	notifications: unknown;
+	prompt: string;
+	spotlight: unknown;
+}) {
+	const spotlightItems = extractItems(options.spotlight);
+	const notificationItems = extractItems(options.notifications);
+	return [
+		"# Attention Spotlight hiện tại",
+		"",
+		`Generated: ${options.createdAt}`,
+		`Prompt: ${options.prompt}`,
+		"",
+		"## Trả lời ngắn",
+		"",
+		spotlightItems.length
+			? `Spotlight đang có ${spotlightItems.length} item. Item nổi bật đầu tiên là **${pickTitle(spotlightItems[0]) || "unnamed"}**.`
+			: "Spotlight payload hiện chưa có item previewable.",
+		"",
+		"## Spotlight preview",
+		"",
+		...previewItems(spotlightItems, 8),
+		"",
+		"## Recent performance notifications",
+		"",
+		...previewItems(notificationItems, 5),
+		"",
+		"## Cách đọc",
+		"",
+		"- Spotlight dùng để xem narrative nào đã có trigger đủ rõ và đang được theo dõi qua signal history.",
+		"- Nếu muốn xuống token-level, hãy lấy lead token của narrative rồi chạy `Phân tích token <address>`.",
+	].join("\n");
+}
+
+function renderNarrativePromptAnswerMarkdown(options: {
+	context: AgentContextResponse | null;
+	createdAt: string;
+	learning: unknown;
+	liveTopic: AgentContextTopic | null;
+	prompt: string;
+	query: string;
+	signals: unknown;
+	warnings: string[];
+}) {
+	const learningItems = extractItems(options.learning);
+	const bestLearning = learningItems[0] || null;
+	const lead = options.liveTopic?.topTokens[0] || null;
+	const summary =
+		options.liveTopic?.summary ||
+		pickSummary(bestLearning) ||
+		"Chưa có summary đủ rõ từ live topic hoặc learning archive.";
+	return [
+		`# Narrative: ${options.query}`,
+		"",
+		`Generated: ${options.createdAt}`,
+		`Prompt: ${options.prompt}`,
+		options.context
+			? `Attention context: ${options.context.generatedAt}`
+			: "Attention context: unavailable",
+		"",
+		"## Narrative này nói về gì?",
+		"",
+		summary,
+		"",
+		"## Live status",
+		"",
+		options.liveTopic
+			? `- Live match: ${options.liveTopic.name} (${options.liveTopic.mode} #${options.liveTopic.rank}, score ${options.liveTopic.attentionScore}, ${formatUsd(options.liveTopic.netInflow1h)} 1h inflow).`
+			: "- Không thấy live topic match đủ rõ trong Now Attention hiện tại.",
+		lead?.address
+			? `- Lead token: ${lead.symbol} ${lead.address} (${formatUsd(lead.marketCap)} mcap, ${formatUsd(lead.liquidity)} liquidity).`
+			: "- Lead token: chưa có hoặc không đủ rõ.",
+		options.liveTopic?.tags?.length
+			? `- Tags: ${options.liveTopic.tags.join(", ")}.`
+			: "- Tags: unavailable.",
+		"",
+		"## Learning / archive",
+		"",
+		...(learningItems.length
+			? learningItems.slice(0, 5).map((item, index) => {
+					const title = pickTitle(item) || `Learning item ${index + 1}`;
+					const itemSummary = pickSummary(item);
+					return itemSummary
+						? `- ${title}: ${itemSummary}`
+						: `- ${title}`;
+				})
+			: ["- Không có learning archive match cho query này."]),
+		"",
+		"## Spotlight / signal context",
+		"",
+		options.signals
+			? `- Signal payload keys: ${describeKeys(options.signals)}.`
+			: "- Chưa có signal context vì không tìm thấy live topic id đủ rõ.",
+		"",
+		"## Cách demo tiếp",
+		"",
+		options.liveTopic?.topTokens[0]?.address
+			? `- \`Phân tích token ${options.liveTopic.topTokens[0].address}\``
+			: "- `Phân tích token <solana-token-address>`",
+		`- \`Trending Narrative hiện là gì?\``,
+		options.liveTopic
+			? `- \`npm run thesis -- --topic ${options.liveTopic.id}\``
+			: "- `npm run topics -- --search <query>`",
+		"",
+		...(options.warnings.length
+			? ["## Request warnings", "", ...options.warnings.map((warning) => `- ${warning}`)]
+			: []),
+	].join("\n");
+}
+
+function renderProviderPromptAnswerMarkdown(options: {
+	address: string;
+	animemeMetrics: TokenMetricsResponse | null;
+	binanceBundle: BinanceMarketBundle | null;
+	binanceError: string | null;
+	context: AgentContextResponse | null;
+	createdAt: string;
+	gmgnMetrics: TokenMetricsResponse | null;
+	gmgnMetricsError: string | null;
+	prompt: string;
+	symbol: string;
+}) {
+	const gmgnMetric = findMetricForAddress(options.gmgnMetrics, options.address);
+	const animemeMetric = findMetricForAddress(
+		options.animemeMetrics,
+		options.address,
+	);
+	const price = getNestedField(options.binanceBundle?.spot.price, ["price"]);
+	return [
+		`# Provider data: ${options.address}`,
+		"",
+		`Generated: ${options.createdAt}`,
+		`Prompt: ${options.prompt}`,
+		"",
+		"## Animeme",
+		"",
+		options.context
+			? `- Now Attention: loaded (${options.context.source}, ${options.context.topics.length} topics, generated ${options.context.generatedAt}).`
+			: "- Now Attention: unavailable.",
+		animemeMetric
+			? `- Market fallback: loaded (${describeKeys(animemeMetric)}).`
+			: "- Market fallback: no metric item for this token.",
+		"",
+		"## GMGN",
+		"",
+		gmgnMetric
+			? `- Direct GMGN API-key metrics: loaded (${describeKeys(gmgnMetric)}).`
+			: options.gmgnMetricsError
+				? `- Direct GMGN API-key metrics: failed (${options.gmgnMetricsError}).`
+				: "- Direct GMGN API-key metrics: no token item returned.",
+		"",
+		"## Binance",
+		"",
+		options.binanceBundle
+			? `- Spot baseline ${options.symbol}: price ${price ? String(price) : "unavailable"}, spot keys ${describeKeys(options.binanceBundle.spot)}.`
+			: options.binanceError
+				? `- Binance public bundle: failed (${options.binanceError}).`
+				: "- Binance public bundle: unavailable.",
+		options.binanceBundle?.web3
+			? `- Web3 token context: loaded (${describeKeys(options.binanceBundle.web3)}).`
+			: "- Web3 token context: unavailable or no match.",
+		"",
+		"## Next",
+		"",
+		`- \`Phân tích token ${options.address}\``,
+		`- \`npm run token:deep -- --address ${options.address}\``,
+		`- \`npm run binance -- --symbol ${options.symbol} --address ${options.address}\``,
+	].join("\n");
+}
+
+function renderPromptHelpMarkdown(createdAt: string) {
+	return [
+		"# Animeme Prompt Answer",
+		"",
+		`Generated: ${createdAt}`,
+		"",
+		"Use `npm run answer -- --prompt \"...\"` for demo-friendly natural-language answers.",
+		"",
+		"## Demo prompts",
+		"",
+		"- `Phân tích token <solana-token-address>`",
+		"- `Token <solana-token-address> có an toàn không?`",
+		"- `Trending Narrative hiện là gì?`",
+		"- `Narrative LUNCHMONEY nói về cái gì?`",
+		"- `GMGN và Binance data của <solana-token-address>`",
+		"- `Attention Spotlight đang highlight gì?`",
+		"- `Topic nào đang rising mạnh nhất?`",
+		"",
+		"## What the router loads",
+		"",
+		"- Token prompts: Animeme Now Attention, Narrative Learning, direct GMGN API-key metrics, Animeme market fallback, and Binance public Spot/Web3 context.",
+		"- Trending prompts: live Now Attention ranking and lead token surfaces.",
+		"- Narrative prompts: live topic match, Narrative Learning search, and Spotlight signal keys when a live topic is found.",
+		"- Provider prompts: Animeme, GMGN, and Binance sections kept separate.",
 	].join("\n");
 }
 
@@ -1427,13 +2128,15 @@ async function writeArtifacts(
 ) {
 	await mkdir("artifacts", { recursive: true });
 	const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-	const slug = payload.topic
-		? slugify(payload.topic.name)
-		: payload.address
-			? slugify(payload.address)
+	const slug = payload.address
+		? slugify(payload.address)
+		: payload.topic
+			? slugify(payload.topic.name)
 			: payload.symbol
 				? slugify(payload.symbol)
-				: "context";
+				: payload.prompt
+					? slugify(payload.prompt)
+					: "context";
 	const base = path.join("artifacts", `${timestamp}-${kind}-${slug}`);
 	const jsonPath = `${base}.json`;
 	const markdownPath = `${base}.md`;
@@ -1448,6 +2151,9 @@ async function writeArtifacts(
 function renderArtifactSummary(payload: ArtifactPayload & Record<string, unknown>) {
 	if (payload.kind === "scan") {
 		return "# Animeme Agent Scan\n\nJSON artifact contains the full scan payload.\n";
+	}
+	if (payload.kind === "answer") {
+		return "# Animeme Prompt Answer\n\nJSON artifact contains the structured prompt answer payload.\n";
 	}
 	if (payload.topic) {
 		return `# ${payload.kind}: ${payload.topic.name}\n\nJSON artifact contains the structured topic payload.\n`;
@@ -1632,6 +2338,286 @@ function collectSettledWarnings(
 	);
 }
 
+function readPrompt(args: ParsedArgs) {
+	const flagPrompt =
+		readStringFlag(args, "prompt") ||
+		readStringFlag(args, "q") ||
+		readStringFlag(args, "question");
+	if (flagPrompt) {
+		return flagPrompt;
+	}
+	return args.positionals.join(" ").trim();
+}
+
+function detectAnswerRoute(prompt: string): AnswerRoute {
+	const text = normalizePromptText(prompt);
+	const hasAddress = Boolean(extractSolanaAddress(prompt));
+	if (/\b(doctor|setup|health|check|kiem tra|cai dat|san sang)\b/.test(text)) {
+		return "doctor";
+	}
+	if (
+		hasAddress &&
+		/\b(gmgn|binance|provider|raw|data|du lieu|metrics?|nguon)\b/.test(text)
+	) {
+		return "provider";
+	}
+	if (
+		hasAddress ||
+		/\b(phan tich|analyze|analysis|token|contract|ca|dia chi|safe|an toan)\b/.test(
+			text,
+		)
+	) {
+		return "token";
+	}
+	if (/\b(spotlight|highlight|signal|tin hieu)\b/.test(text)) {
+		return "spotlight";
+	}
+	if (
+		/\b(narrative|topic|chu de)\b/.test(text) &&
+		extractNarrativeQuery(prompt) &&
+		!/\b(trending narrative|narrative nao|topic nao|chu de nao)\b/.test(text)
+	) {
+		return "narrative";
+	}
+	if (
+		/\b(trending|trend|hot|hien|hien tai|dang|top|xu huong|chu de nao|narrative nao|rising)\b/.test(
+			text,
+		) &&
+		/\b(narrative|topic|chu de|attention|trend|hot|rising)\b/.test(text)
+	) {
+		return "trending";
+	}
+	if (/\b(watch|theo doi|nen xem|tiep theo)\b/.test(text)) {
+		return "trending";
+	}
+	if (
+		/\b(narrative|topic|chu de|noi ve|la gi|giai thich|explain|what is|meaning|about)\b/.test(
+			text,
+		)
+	) {
+		return "narrative";
+	}
+	return "help";
+}
+
+function extractSolanaAddress(value: string) {
+	return value.match(/\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/)?.[0] || null;
+}
+
+function extractNarrativeQuery(prompt: string) {
+	const withoutAddress = prompt.replace(/\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/g, " ");
+	const quoted = withoutAddress.match(/["'`](.+?)["'`]/)?.[1];
+	if (quoted) {
+		return cleanNarrativeQuery(quoted);
+	}
+	const markerMatch = withoutAddress.match(
+		/(?:narrative|topic|chủ đề|chu de)\s+(.+)/i,
+	)?.[1];
+	return cleanNarrativeQuery(markerMatch || withoutAddress);
+}
+
+function cleanNarrativeQuery(value: string) {
+	const stopwords = new Set([
+		"a",
+		"about",
+		"cai",
+		"chu",
+		"compare",
+		"con",
+		"current",
+		"dang",
+		"de",
+		"explain",
+		"gi",
+		"giai",
+		"hien",
+		"hot",
+		"is",
+		"khong",
+		"la",
+		"manh",
+		"meaning",
+		"narrative",
+		"noi",
+		"now",
+		"tai",
+		"the",
+		"thich",
+		"nhat",
+		"topic",
+		"trending",
+		"ve",
+		"voi",
+		"what",
+		"xu",
+		"huong",
+		"sanh",
+		"so",
+	]);
+	return value
+		.split(/\s+/)
+		.map((word) => word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
+		.filter((word) => word && !stopwords.has(normalizePromptText(word)))
+		.join(" ")
+		.trim();
+}
+
+function normalizePromptText(value: string) {
+	return value
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "")
+		.replace(/đ/g, "d")
+		.replace(/Đ/g, "D")
+		.toLowerCase();
+}
+
+function findLiveTopicByQuery(
+	context: AgentContextResponse,
+	query: string,
+): AgentContextTopic | null {
+	const normalizedQuery = normalizeForMatch(query);
+	if (!normalizedQuery) {
+		return null;
+	}
+	const queryWords = normalizedQuery.split(" ").filter((word) => word.length > 1);
+	const scored = context.topics
+		.map((topic) => ({
+			score: scoreTopicMatch(topic, normalizedQuery, queryWords),
+			topic,
+		}))
+		.filter((entry) => entry.score > 0)
+		.sort((a, b) => b.score - a.score || a.topic.rank - b.topic.rank);
+	return scored[0]?.topic || null;
+}
+
+function scoreTopicMatch(
+	topic: AgentContextTopic,
+	normalizedQuery: string,
+	queryWords: string[],
+) {
+	const name = normalizeForMatch(topic.name);
+	const tags = normalizeForMatch(topic.tags.join(" "));
+	const summary = normalizeForMatch(topic.summary);
+	if (name === normalizedQuery) {
+		return 100;
+	}
+	if (name.includes(normalizedQuery) || normalizedQuery.includes(name)) {
+		return 80;
+	}
+	if (tags.includes(normalizedQuery)) {
+		return 55;
+	}
+	if (summary.includes(normalizedQuery)) {
+		return 45;
+	}
+	const haystack = `${name} ${tags} ${summary}`;
+	const overlap = queryWords.filter((word) => haystack.includes(word)).length;
+	return overlap >= 2 ? 20 + overlap : overlap;
+}
+
+function normalizeForMatch(value: string) {
+	return normalizePromptText(value).replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function renderBinancePromptLines(
+	bundle: BinanceMarketBundle | OptionalFailure,
+	symbol: string,
+) {
+	if (isOptionalFailure(bundle)) {
+		return [`- Binance public market/Web3: unavailable (${bundle.error}).`];
+	}
+	const price = getNestedField(bundle.spot.price, ["price"]);
+	return [
+		`- Binance public Spot baseline ${symbol}: loaded (price ${price ? String(price) : "unavailable"}, keys ${describeKeys(bundle.spot)}).`,
+		bundle.web3
+			? `- Binance public Web3 token context: loaded (${describeKeys(bundle.web3)}).`
+			: "- Binance public Web3 token context: unavailable or no token match.",
+	];
+}
+
+function translateVerdict(verdict: TokenIntelligenceReport["verdict"]) {
+	if (verdict === "researchable") {
+		return "có đủ tín hiệu sạch để tiếp tục research";
+	}
+	if (verdict === "watch") {
+		return "đáng theo dõi nhưng chưa đủ để kết luận mạnh";
+	}
+	if (verdict === "high-risk") {
+		return "rủi ro cao hoặc dữ liệu chưa đủ";
+	}
+	return "nên dừng escalation vì có hard-stop";
+}
+
+function translateConfidence(confidence: TokenIntelligenceReport["confidence"]) {
+	if (confidence === "high") {
+		return "cao";
+	}
+	if (confidence === "medium") {
+		return "trung bình";
+	}
+	return "thấp";
+}
+
+function translateReportLine(value: string) {
+	return value
+		.replace(
+			"Linked to live Animeme attention topics.",
+			"Token đang gắn với live Now Attention của Animeme.",
+		)
+		.replace(
+			"Has matching Animeme learning archive context.",
+			"Có context trong Narrative Learning archive.",
+		)
+		.replace(
+			"GMGN/Animeme market metrics are available.",
+			"Đã có market metrics từ GMGN/Animeme.",
+		)
+		.replace(
+			"Required GMGN API-key metrics are loaded for holder, insider, and bundler hard-stop checks.",
+			"GMGN API-key đã trả đủ holder, insider, và bundler fields để kiểm hard-stop.",
+		)
+		.replace(
+			"No live Animeme attention topic currently links this token.",
+			"Chưa có live Animeme topic gắn trực tiếp với token.",
+		)
+		.replace(
+			"GMGN/Animeme market metrics are not available yet.",
+			"Chưa có GMGN/Animeme market metrics.",
+		)
+		.replace(
+			"Fresh-wallet share is high; verify that activity is organic.",
+			"Fresh-wallet share cao; cần kiểm tra activity có organic không.",
+		)
+		.replace(
+			"Fresh-wallet share is not unusually high.",
+			"Fresh-wallet share chưa cao bất thường.",
+		)
+		.replace(
+			"Smart holder count is meaningful.",
+			"Smart holder count đủ đáng chú ý.",
+		)
+		.replace(
+			"Smart holder count is present but thin.",
+			"Có smart holder nhưng còn mỏng.",
+		)
+		.replace(
+			"No smart holders detected in the GMGN metrics snapshot.",
+			"GMGN snapshot chưa thấy smart holder.",
+		)
+		.replace(
+			"KOL holder presence is visible.",
+			"Có KOL holder presence.",
+		)
+		.replace(
+			"Full GMGN API-key metrics are incomplete:",
+			"GMGN API-key metrics chưa đủ:",
+		)
+		.replace(
+			"Do not treat hard-stop checks as cleared.",
+			"Không được coi hard-stop checks là đã clear.",
+		);
+}
+
 function extractItems(payload: unknown): unknown[] {
 	if (Array.isArray(payload)) {
 		return payload;
@@ -1693,6 +2679,47 @@ function pickTitle(item: unknown): string | null {
 		}
 	}
 	return null;
+}
+
+function pickSummary(item: unknown): string | null {
+	if (!item || typeof item !== "object") {
+		return null;
+	}
+	const record = item as Record<string, unknown>;
+	for (const key of [
+		"summary",
+		"description",
+		"aiSummary",
+		"analysis",
+		"takeaway",
+		"thesis",
+	]) {
+		const value = record[key];
+		if (typeof value === "string" && value.trim()) {
+			return compactText(value.trim(), 260);
+		}
+		if (value && typeof value === "object") {
+			const nested = value as Record<string, unknown>;
+			for (const nestedKey of ["aiSummaryEn", "text", "summary"]) {
+				const nestedValue = nested[nestedKey];
+				if (typeof nestedValue === "string" && nestedValue.trim()) {
+					return compactText(nestedValue.trim(), 260);
+				}
+			}
+		}
+	}
+	const nestedItem = record.item;
+	if (nestedItem && typeof nestedItem === "object") {
+		return pickSummary(nestedItem);
+	}
+	return null;
+}
+
+function compactText(value: string, maxLength: number) {
+	const singleLine = value.replace(/\s+/g, " ");
+	return singleLine.length > maxLength
+		? `${singleLine.slice(0, maxLength - 3)}...`
+		: singleLine;
 }
 
 function renderMetricLines(metric: Record<string, unknown>) {

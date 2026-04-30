@@ -34,6 +34,9 @@ npm install
 ## Fast Path
 
 ```bash
+npm run answer -- --prompt "Phân tích token <token-address>"
+npm run answer -- --prompt "Token <token-address> có an toàn không?"
+npm run answer -- --prompt "GMGN và Binance data của <token-address>"
 npm run doctor
 npm run token -- --address <token-address>
 npm run token:deep -- --address <token-address>
@@ -50,6 +53,33 @@ For complete token analysis, configure the GMGN key with either
 `GMGN_API_KEY` or `~/.config/gmgn/.env`. `npm run doctor` reports only the key
 status, never the key value.
 Binance public data does not require Binance account credentials.
+
+## Demo Prompt Handling
+
+When the user writes a natural-language token prompt, prefer:
+
+```bash
+npm run answer -- --prompt "Phân tích token <token-address>"
+```
+
+The `answer` router calls the deep token path and also loads Binance public
+Spot/Web3 context. Use it for prompts like:
+
+- `Phân tích token X`
+- `Token X có an toàn không?`
+- `Token X có đáng research không?`
+- `GMGN và Binance data của X`
+- `Analyze token X with Animeme, GMGN, and Binance`
+
+The answer must separate source status:
+
+- Animeme Now Attention and Narrative Learning.
+- Direct GMGN API-key metrics and required hard-stop fields.
+- Animeme market fallback.
+- Binance public Spot/Web3 context.
+
+If GMGN hard-stop fields are missing, keep confidence capped and say the token
+is not fully cleared even when the narrative looks strong.
 
 ## First Response Guide
 

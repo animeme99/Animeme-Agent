@@ -33,6 +33,9 @@ npm install
 ## Fast Path
 
 ```bash
+npm run answer -- --prompt "Trending Narrative hiện là gì?"
+npm run answer -- --prompt "Narrative <name> nói về cái gì?"
+npm run answer -- --prompt "Phân tích token <token-address>"
 npm run doctor
 npm run demo
 npm run brief
@@ -53,6 +56,33 @@ For complete token analysis, configure `GMGN_API_KEY` in the environment or in
 If npm strips flags in the current shell, token and provider commands accept
 positional forms such as `npm run token:deep -- <token-address>` and
 `npm run binance:spot -- /api/v3/ticker/price SOLUSDT`.
+
+## Natural-Language Demo Router
+
+Use `npm run answer -- --prompt "<question>"` when the user asks in normal
+language. It is the best path for video demos and first-time users.
+If the local npm shell strips `--prompt`, use
+`npm run answer -- "<question>"`.
+
+Supported prompt families:
+
+- `Phân tích token X`, `Token X có an toàn không?`, `Analyze token X`: loads
+  Animeme Now Attention, Narrative Learning, direct GMGN API-key metrics,
+  Animeme market fallback, and Binance public Spot/Web3 context.
+- `Trending Narrative hiện là gì?`, `What is hot now?`, `Topic nào đang rising?`:
+  returns current Now Attention ranking and follow-up prompts.
+- `Narrative X nói về cái gì?`, `Explain narrative X`, `What is X about?`:
+  searches live topics plus Narrative Learning and includes Spotlight signal
+  keys when available.
+- `Attention Spotlight đang highlight gì?`, `What is Spotlight showing?`:
+  loads the current Spotlight preview and recent performance notifications.
+- `GMGN và Binance data của X`: returns separate Animeme, GMGN, and Binance
+  provider sections.
+- `check setup`, `doctor`, `kiểm tra cài đặt`: runs the doctor readiness report.
+
+For Vietnamese prompts, answer in Vietnamese. Keep the response concise:
+conclusion, data sources, current signal, missing data, warnings, and next
+prompt.
 
 ## First Response Guide
 

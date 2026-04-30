@@ -15,6 +15,11 @@ and then asks what to do next, show the capability menu from `AGENTS.md`, offer
 the default demo flow, start with `npm run doctor` and `npm run demo` when the
 repo is available, and run only read-only commands.
 
+For natural-language demo prompts, prefer `npm run answer -- --prompt
+"<question>"`. It handles token analysis, current trending narratives,
+narrative explanations, Spotlight previews, and provider data checks while
+keeping Animeme, GMGN, and Binance source status separate.
+
 If the installed skill folder only contains `SKILL.md`, clone
 `https://github.com/0xchalker/Animeme-Agent` before running CLI commands. For
 token analysis, `npm run doctor` must check GMGN API key status, and

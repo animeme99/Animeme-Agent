@@ -21,6 +21,14 @@ Use the ANIMEME skills. Run the doctor check, then run the demo brief and tell
 me the strongest topic, lead token, risk, and next command.
 ```
 
+For video demos or natural-language agent use, the easiest CLI command is:
+
+```bash
+npm run answer -- --prompt "Trending Narrative hiện là gì?"
+npm run answer -- --prompt "Narrative LUNCHMONEY nói về cái gì?"
+npm run answer -- --prompt "Phân tích token <solana-token-address>"
+```
+
 The Agent Skill is a support layer. The core product remains
 [animeme.app](https://animeme.app): live pre-chart meme intelligence.
 
@@ -151,6 +159,39 @@ Animeme access is limited to public `/api/*` paths. GMGN access requires
 `GMGN_API_KEY`. Binance commands use public Spot and Web3 market endpoints and
 do not require Binance account credentials.
 
+## Natural-Language Demo Prompts
+
+Use `answer` when the user asks in normal language and you want a polished
+response without manually choosing commands:
+
+```bash
+npm run answer -- --prompt "Phân tích token 3vH3NzuHafRNvwKKzoGTWNuLtg5Kc38BxsmfUwgPpump"
+npm run answer -- --prompt "Trending Narrative hiện là gì?"
+npm run answer -- --prompt "Narrative LUNCHMONEY nói về cái gì?"
+npm run answer -- --prompt "Token <address> có an toàn không?"
+npm run answer -- --prompt "GMGN và Binance data của <address>"
+```
+
+If the local npm shell strips `--prompt`, use the positional form:
+
+```bash
+npm run answer -- "Trending Narrative hiện là gì?"
+```
+
+Routing behavior:
+
+- Token prompts load Animeme Now Attention, Narrative Learning, direct GMGN
+  API-key metrics, Animeme market fallback data, and Binance public Spot/Web3
+  context.
+- Trending prompts rank the live Now Attention board and return demo follow-up
+  prompts.
+- Narrative prompts search live topics plus Narrative Learning and include
+  Spotlight signal keys when a live topic is matched.
+- Spotlight prompts return the current Spotlight preview and recent performance
+  notifications.
+- Provider prompts keep Animeme, GMGN, and Binance sections separate so missing
+  data is visible.
+
 ## First Prompt After Install
 
 Ask the agent:
@@ -243,6 +284,7 @@ Agent use:
 
 | Command | Purpose | Output |
 | --- | --- | --- |
+| `npm run answer -- --prompt "<question>"` | Route natural-language demo prompts to token, trending, narrative, provider, or doctor answers. | Prompt answer artifact |
 | `npm run doctor` | Check local runtime and public API reachability. | Doctor artifact |
 | `npm run demo` | First-run bundle for new users: attention, spotlight, learning, resources, and next commands. | Full public context artifact |
 | `npm run brief` | Daily public context brief for operator-style use. | Full public context artifact |
@@ -428,6 +470,7 @@ The repo ignores generated artifacts by default, except `artifacts/.gitkeep`.
 |   +-- .gitkeep
 +-- docs/
 |   +-- data-catalog.md
+|   +-- demo-prompt-playbook.md
 |   +-- token-intelligence-playbook.md
 +-- memory/
 |   +-- README.md
