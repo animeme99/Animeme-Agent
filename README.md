@@ -51,8 +51,9 @@ attention -> legibility -> narrative -> heat confirmation
 
 ## What This Repo Does
 
-This repo lets an agent reuse ANIMEME public intelligence without needing
-private keys, credentials, or production access.
+This repo lets an agent reuse ANIMEME public intelligence without private
+keys, wallet credentials, or production access. Complete token due diligence
+also uses a user-provided `GMGN_API_KEY` for direct GMGN market metrics.
 
 It can:
 
@@ -60,7 +61,8 @@ It can:
 - explain Attention Spotlight and recent signal history
 - search Narrative Learning and Explore Narrative memory
 - inspect topic detail and public source context
-- analyze a token address against live attention and neutral market metrics
+- analyze a token address against live attention, direct GMGN API-key metrics,
+  and Animeme market fallback data
 - write JSON and Markdown artifacts under `artifacts/`
 - expose reusable skills under `.agents/skills/`
 
@@ -104,6 +106,31 @@ npm run doctor
 npm run demo
 ```
 
+If an installed skill folder only contains `SKILL.md`, clone this GitHub repo
+before running token or data commands. The executable CLI lives in this repo
+root and requires `package.json`.
+
+## GMGN API Key For Token Analysis
+
+`token` and `token:deep` always combine Animeme trending data with GMGN token
+metrics. Complete token due diligence requires one of these local settings:
+
+```bash
+export GMGN_API_KEY="<your-gmgn-openapi-key>"
+```
+
+or:
+
+```text
+~/.config/gmgn/.env
+GMGN_API_KEY=<your-gmgn-openapi-key>
+```
+
+`npm run doctor` reports whether the key is configured, but never prints or
+writes the key. If GMGN metrics are missing, `token:deep` marks the analysis
+incomplete, lowers confidence, and does not clear holder, insider, or bundler
+hard-stop checks.
+
 ## First Prompt After Install
 
 Ask the agent:
@@ -124,6 +151,7 @@ ANIMEME Agent Skill can help with:
 
 Default demo:
 - Run npm run doctor.
+- If this folder only has SKILL.md, clone https://github.com/0xchalker/Animeme-Agent first.
 - Run npm run demo.
 - Pick the strongest Attention Read from the demo or scan.
 - Run npm run thesis -- --topic <topic-id>.
@@ -137,6 +165,13 @@ For token due diligence:
 Use animeme-token-intelligence.
 Run npm run token:deep -- --address <token-address>.
 Explain the score, warnings, hard stops, and missing data.
+```
+
+The CLI also accepts the token as a positional argument, which helps in npm
+environments that strip flags:
+
+```bash
+npm run token:deep -- <token-address>
 ```
 
 ## Public Surfaces
@@ -214,7 +249,7 @@ Agent use:
 | Live Attention | `/api/now-attention-feed` | What has attention now? What is new? Which topics have live flow? | `demo`, `brief`, `scan`, `hot`, `new` |
 | Spotlight | `/api/spotlight`, `/api/spotlight-topic-signals` | Why this, why now, and what happened since first trigger? | `demo`, `brief`, `spotlight`, `topic` |
 | Learning | `/api/learning/*` | What patterns worked before? Which topics repeated? What did ANIMEME learn? | `demo`, `brief`, `learning`, `topics`, `topic` |
-| Market Metrics | `/api/market/token-metrics` | Is this token crowded, manipulated, or worth deeper research? | `token`, `token:deep` |
+| Market Metrics | GMGN OpenAPI via `GMGN_API_KEY`, plus `/api/market/token-metrics` fallback | Is this token crowded, manipulated, or worth deeper research? | `token`, `token:deep` |
 | Raw API | public `/api/*` allowlist | Let advanced agents inspect new public endpoints without code changes. | `fetch` |
 
 ## Intelligence Loop
@@ -254,7 +289,8 @@ Inputs:
 
 - live attention match
 - learning archive match
-- neutral market metrics
+- GMGN API-key market metrics
+- Animeme public market fallback metrics
 - holder concentration
 - creator/dev concentration
 - insider pressure
@@ -362,6 +398,7 @@ The repo ignores generated artifacts by default, except `artifacts/.gitkeep`.
 +-- src/
 |   +-- animeme-client.ts
 |   +-- cli.ts
+|   +-- gmgn-client.ts
 |   +-- token-intelligence.ts
 +-- AGENTS.md
 +-- CLAUDE.md
@@ -388,12 +425,17 @@ The client only accepts public ANIMEME API paths under `/api/*`.
 | `/api/learning/attention-distribution` | `demo`, `brief`, `learning` |
 | `/api/market/token-metrics?addresses=<address>` | `token`, `token:deep` |
 
+Direct GMGN OpenAPI is used only by the local CLI when `GMGN_API_KEY` is
+configured. It is not an Animeme public `/api/*` route and the key must never be
+committed, printed, or copied into artifacts.
+
 ## Reliability Model
 
 The CLI is intentionally conservative:
 
 - non-JSON responses become explicit warnings
 - missing market metrics do not become bullish
+- missing GMGN API-key metrics make `token:deep` incomplete
 - missing attention context lowers confidence
 - hard stops override attractive narratives
 - every report stays advisory
@@ -454,7 +496,8 @@ No. It is read-only.
 
 ### Does this need wallet credentials?
 
-No. The public workflows do not require secrets.
+No wallet credentials are needed. Complete token analysis can use a read-only
+`GMGN_API_KEY`; never provide private keys or seed phrases.
 
 ### Can agents fetch arbitrary websites?
 
@@ -464,7 +507,8 @@ ANIMEME `/api/*` paths only.
 ### What happens when data is missing?
 
 The CLI reports missing data explicitly and lowers confidence. Missing data is
-never treated as bullish.
+never treated as bullish. If GMGN API-key metrics are missing, `token:deep`
+stays incomplete even when Animeme trending data is present.
 
 ### Is the score financial advice?
 

@@ -23,14 +23,29 @@ export function buildTokenIntelligenceReport(
 ): TokenIntelligenceReport {
 	const metric = findMetricForAddress(input.metrics, input.address);
 	const marketProfile = {
-		bundlerPercent: readNumber(metric, "bundlerPercent"),
-		creatorDevHoldingPercent: readNumber(metric, "creatorDevHoldingPercent"),
-		freshWalletPercent: readNumber(metric, "freshWalletPercent"),
-		insiderPercent: readNumber(metric, "insiderPercent"),
-		kolHolders: readNumber(metric, "kolHolders"),
-		smartHolders: readNumber(metric, "smartHolders"),
-		top10HolderPercent: readNumber(metric, "top10HolderPercent"),
-		totalFeesPaidSol: readNumber(metric, "totalFeesPaidSol"),
+		bundlerPercent: readNumber(metric, [
+			"bundlerPercent",
+			"gmgnBundlerPercent",
+		]),
+		creatorDevHoldingPercent: readNumber(metric, [
+			"creatorDevHoldingPercent",
+			"gmgnCreatorDevHoldingPercent",
+		]),
+		freshWalletPercent: readNumber(metric, [
+			"freshWalletPercent",
+			"gmgnFreshWalletPercent",
+		]),
+		insiderPercent: readNumber(metric, ["insiderPercent", "gmgnInsiderPercent"]),
+		kolHolders: readNumber(metric, ["kolHolders", "gmgnKolHolders"]),
+		smartHolders: readNumber(metric, ["smartHolders", "gmgnSmartHolders"]),
+		top10HolderPercent: readNumber(metric, [
+			"top10HolderPercent",
+			"gmgnTop10HolderPercent",
+		]),
+		totalFeesPaidSol: readNumber(metric, [
+			"totalFeesPaidSol",
+			"gmgnTotalFeesPaid",
+		]),
 	};
 	const strengths: string[] = [];
 	const warnings: string[] = [];
@@ -52,10 +67,10 @@ export function buildTokenIntelligenceReport(
 
 	if (!metric) {
 		score -= 12;
-		warnings.push("Neutral market metrics are not available yet.");
+		warnings.push("GMGN/Animeme market metrics are not available yet.");
 	} else {
 		score += 4;
-		strengths.push("Neutral market metrics are available.");
+		strengths.push("GMGN/Animeme market metrics are available.");
 	}
 
 	score += scoreConcentration("Top 10 holder share", marketProfile.top10HolderPercent, {
@@ -106,7 +121,7 @@ export function buildTokenIntelligenceReport(
 			warnings.push("Smart holder count is present but thin.");
 		} else {
 			score -= 6;
-			warnings.push("No smart holders detected in the neutral metrics snapshot.");
+			warnings.push("No smart holders detected in the GMGN metrics snapshot.");
 		}
 	}
 
@@ -183,11 +198,11 @@ function scoreConcentration(
 	return 5;
 }
 
-function readNumber(record: Record<string, unknown> | null, key: string) {
+function readNumber(record: Record<string, unknown> | null, keys: readonly string[]) {
 	if (!record) {
 		return null;
 	}
-	const value = record[key];
+	const value = getField(record, keys);
 	if (typeof value === "number" && Number.isFinite(value)) {
 		return value;
 	}

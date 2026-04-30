@@ -12,15 +12,18 @@ actions.
 
 ## Fast Path
 
-1. Run `npm install` if dependencies are missing.
-2. Run `npm run typecheck`.
-3. Load `.agents/skills/animeme-data/SKILL.md`.
-4. For token due diligence, also load
+1. If the current folder only has `SKILL.md` and no `package.json`, clone
+   `https://github.com/0xchalker/Animeme-Agent` and work from that repo root.
+2. Run `npm install` if dependencies are missing.
+3. Run `npm run typecheck`.
+4. Load `.agents/skills/animeme-data/SKILL.md`.
+5. For token due diligence, also load
    `.agents/skills/animeme-token-intelligence/SKILL.md`.
-5. Run `npm run doctor` to confirm Node and public API reachability.
-6. Run `npm run demo` for one full public ANIMEME context bundle.
-7. Run `npm run scan` for focused current attention.
-8. Use the most specific command for the task:
+6. Run `npm run doctor` to confirm Node, public API reachability, and GMGN API
+   key status.
+7. Run `npm run demo` for one full public ANIMEME context bundle.
+8. Run `npm run scan` for focused current attention.
+9. Use the most specific command for the task:
    - `npm run brief`
    - `npm run token -- --address <token-address>`
    - `npm run token:deep -- --address <token-address>`
@@ -30,7 +33,7 @@ actions.
    - `npm run thesis -- --topic <topic-id>`
    - `npm run risk -- --topic <topic-id>`
    - `npm run watch -- --topic <topic-id>`
-8. Save outputs only under `artifacts/`.
+10. Save outputs only under `artifacts/`.
 
 ## New User Guide
 
@@ -63,7 +66,9 @@ If the user provides a token address, switch to:
 
 ```text
 Token demo flow:
+- Run npm run doctor and verify GMGN API key status.
 - Run npm run token:deep -- --address <token-address>.
+- If npm strips flags, use npm run token:deep -- <token-address>.
 - Explain the Animeme Intelligence Score.
 - Separate strengths, warnings, hard stops, and missing data.
 - Recommend the next research command, not a trade.
@@ -73,9 +78,15 @@ Token demo flow:
 
 Default base URL: `https://animeme.app`
 
-Use only public Animeme `/api/*` routes. The API client is in
-`src/animeme-client.ts`; all analysis and artifact logic is in `src/cli.ts`.
-Do not require secrets.
+Use public Animeme `/api/*` routes for Now Attention, Spotlight, Learning, and
+fallback token metrics. Token due diligence also uses direct GMGN OpenAPI
+metrics when `GMGN_API_KEY` is configured. The key can come from the environment
+or `~/.config/gmgn/.env`; never print it, commit it, or write it into
+artifacts.
+
+The Animeme API client is in `src/animeme-client.ts`, the direct GMGN client is
+in `src/gmgn-client.ts`, and all analysis and artifact logic is in
+`src/cli.ts`.
 
 ## Command Map
 
@@ -93,7 +104,8 @@ Do not require secrets.
 - `npm run topic -- --topic <topic-id>`: one learning topic detail.
 - `npm run token -- --address <token-address>`: arbitrary token analysis.
 - `npm run token:deep -- --address <token-address>`: deeper token due
-  diligence with Animeme Intelligence scoring.
+  diligence with Animeme trending, direct GMGN API-key metrics, fallback
+  Animeme market metrics, and Animeme Intelligence scoring.
 - `npm run fetch -- --path /api/<path>`: raw public Animeme API fetch.
 - `npm run thesis -- --topic <topic-id>`: narrative thesis artifact.
 - `npm run risk -- --topic <topic-id>`: risk checklist artifact.
@@ -108,6 +120,8 @@ When the user asks for agent mode:
 - Use `animeme-data` for public Animeme data workflows.
 - Use `animeme-token-intelligence` for token safety and conviction reviews.
 - Prefer existing commands before inventing new fetch flows.
+- Do not call a token analysis complete unless direct GMGN API-key hard-stop
+  fields are loaded.
 - Write JSON and Markdown artifacts into `artifacts/`.
 - Keep every recommendation advisory and reversible.
 

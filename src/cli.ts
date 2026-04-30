@@ -14,6 +14,11 @@ import {
 	type TokenMetricsResponse,
 } from "./animeme-client.js";
 import {
+	getDirectGmgnTokenMetrics,
+	getGmgnCredentialState,
+	type GmgnCredentialState,
+} from "./gmgn-client.js";
+import {
 	buildTokenIntelligenceReport,
 	findMetricForAddress,
 	type TokenIntelligenceReport,
@@ -54,6 +59,46 @@ type DoctorCheck = {
 	label: string;
 	status: "fail" | "ok" | "warn";
 };
+
+type MetricSourceStatus =
+	| "empty"
+	| "failed"
+	| "loaded"
+	| "missing-key"
+	| "partial";
+
+type TokenMetricDiagnostics = {
+	animemeMarket: {
+		error?: string;
+		status: MetricSourceStatus;
+	};
+	complete: boolean;
+	gmgn: {
+		credential: GmgnCredentialState;
+		error?: string;
+		missingFields: string[];
+		status: MetricSourceStatus;
+	};
+};
+
+const REQUIRED_GMGN_METRIC_FIELDS = [
+	{
+		keys: ["top10HolderPercent", "gmgnTop10HolderPercent"],
+		label: "top-10 holder share",
+	},
+	{
+		keys: ["creatorDevHoldingPercent", "gmgnCreatorDevHoldingPercent"],
+		label: "creator/dev holding share",
+	},
+	{
+		keys: ["insiderPercent", "gmgnInsiderPercent"],
+		label: "insider pressure",
+	},
+	{
+		keys: ["bundlerPercent", "gmgnBundlerPercent"],
+		label: "bundled activity",
+	},
+] satisfies readonly { keys: readonly string[]; label: string }[];
 
 async function main() {
 	const [command = "scan", ...rawArgs] = process.argv.slice(2);
@@ -105,7 +150,7 @@ async function main() {
 		case "scan":
 		case "hot": {
 			const context = await client.getAgentContext();
-			const limit = readNumberFlag(args, "limit", 10);
+			const limit = readNumberFlagOrPosition(args, "limit", 0, 10);
 			const markdown = renderScanMarkdown(context, limit);
 			const artifact = await writeArtifacts("scan", {
 				contextGeneratedAt: context.generatedAt,
@@ -120,7 +165,7 @@ async function main() {
 		}
 		case "new": {
 			const context = await client.getAgentContext();
-			const mode = readModeFlag(args, "mode", "latest");
+			const mode = readModeFlagOrPosition(args, "mode", 0, "latest");
 			const topics = context.topicsByMode[mode] || [];
 			const markdown = renderModeMarkdown(context, mode, topics);
 			const artifact = await writeArtifacts("new", {
@@ -194,7 +239,7 @@ async function main() {
 				attentionTheme: readStringFlag(args, "attention-theme"),
 				page: readNumberFlag(args, "page", 1),
 				pageSize: readNumberFlag(args, "page-size", 20),
-				search: readStringFlag(args, "search"),
+				search: readStringFlagOrPosition(args, "search", 0),
 				tokenAddress: readStringFlag(args, "token"),
 				topicType: readStringFlag(args, "topic-type"),
 			});
@@ -211,7 +256,7 @@ async function main() {
 			return;
 		}
 		case "topic": {
-			const topicId = readRequiredFlag(args, "topic");
+			const topicId = readRequiredFlagOrPosition(args, "topic", 0);
 			const detail = await client.getLearningTopic(topicId);
 			const signals = await settleOptional(() =>
 				client.getSpotlightTopicSignals([topicId]),
@@ -231,56 +276,80 @@ async function main() {
 		}
 		case "token":
 		case "token-deep": {
-			const address = readRequiredFlag(args, "address");
-			const [contextResult, metricsResult, learningResult] =
+			const address = readRequiredFlagOrPosition(args, "address", 0);
+			const deep = command === "token-deep" || Boolean(args.flags.deep);
+			const gmgnCredential = getGmgnCredentialState();
+			const [contextResult, gmgnMetricsResult, animemeMetricsResult, learningResult] =
 				await Promise.allSettled([
 					client.getAgentContext(),
+					getDirectGmgnTokenMetrics([address]),
 					client.getTokenMetrics([address]),
 					client.getLearningTopics({
 						pageSize: 10,
 						tokenAddress: address,
 					}),
 				]);
-			if (contextResult.status === "rejected" && metricsResult.status === "rejected") {
-				throw new Error("Token analysis needs at least live attention or market metrics.");
-			}
 			const context =
 				contextResult.status === "fulfilled" ? contextResult.value : null;
-			const metrics =
-				metricsResult.status === "fulfilled" ? metricsResult.value : null;
+			const gmgnMetrics =
+				gmgnMetricsResult.status === "fulfilled" ? gmgnMetricsResult.value : null;
+			const animemeMetrics =
+				animemeMetricsResult.status === "fulfilled"
+					? animemeMetricsResult.value
+					: null;
+			const metrics = mergeTokenMetrics(address, gmgnMetrics, animemeMetrics);
+			const metricDiagnostics = buildTokenMetricDiagnostics({
+				address,
+				animemeMetrics,
+				animemeMetricsResult,
+				gmgnCredential,
+				gmgnMetrics,
+				gmgnMetricsResult,
+			});
 			const learning =
 				learningResult.status === "fulfilled" ? learningResult.value : null;
 			const attentionTopics = context
 				? findTopicsByTokenAddress(context, address)
 				: [];
 			const learningItems = extractItems(learning);
-			const report = buildTokenIntelligenceReport({
-				address,
-				attentionTopics,
-				learningItems,
-				metrics,
-			});
+			const report = applyTokenMetricRequirement(
+				buildTokenIntelligenceReport({
+					address,
+					attentionTopics,
+					learningItems,
+					metrics,
+				}),
+				metricDiagnostics,
+				deep,
+			);
 			const markdown = renderTokenMarkdown({
 				address,
+				animemeMetrics,
 				attentionTopics,
 				context,
-				deep: command === "token-deep" || Boolean(args.flags.deep),
+				deep,
+				gmgnMetrics,
 				learning,
+				metricDiagnostics,
 				metrics,
 				report,
 				warnings: collectSettledWarnings({
+					animemeMarket: animemeMetricsResult,
 					context: contextResult,
+					gmgnMetrics: gmgnMetricsResult,
 					learning: learningResult,
-					metrics: metricsResult,
 				}),
 			});
 			const artifact = await writeArtifacts("token", {
 				address,
+				animemeMetrics,
 				attentionTopics,
 				contextGeneratedAt: context?.generatedAt,
 				createdAt: new Date().toISOString(),
+				gmgnMetrics,
 				kind: command,
 				learning,
+				metricDiagnostics,
 				metrics,
 				report,
 			});
@@ -290,7 +359,7 @@ async function main() {
 			return;
 		}
 		case "fetch": {
-			const apiPath = readRequiredFlag(args, "path");
+			const apiPath = readRequiredFlagOrPosition(args, "path", 0);
 			const payload = await client.fetchPublicPath(apiPath);
 			const artifact = await writeArtifacts("fetch", {
 				apiPath,
@@ -307,7 +376,7 @@ async function main() {
 		case "risk":
 		case "watch": {
 			const context = await client.getAgentContext();
-			const topic = findTopic(context, readStringFlag(args, "topic"));
+			const topic = findTopic(context, readStringFlagOrPosition(args, "topic", 0));
 			if (!topic) {
 				throw new Error("No Animeme topic is available. Try npm run scan first.");
 			}
@@ -344,6 +413,7 @@ function renderCatalogMarkdown() {
 		"Fast start:",
 		"",
 		"- `npm run doctor` checks local setup and public API reachability.",
+		"- Complete `token:deep` analysis also needs `GMGN_API_KEY` for direct GMGN market metrics.",
 		"- `npm run demo` builds one full public context bundle for a new user.",
 		"- `npm run brief` is the daily operator brief.",
 		"",
@@ -366,6 +436,7 @@ async function runDoctor(client: AnimemeClient) {
 	const nodeMajor = Number(process.versions.node.split(".")[0]);
 	const baseUrl =
 		process.env.ANIMEME_API_BASE_URL || DEFAULT_ANIMEME_API_BASE_URL;
+	const gmgnCredential = getGmgnCredentialState();
 	const checks: DoctorCheck[] = [
 		{
 			detail: `Detected ${process.version}. This kit expects Node 20 or newer.`,
@@ -376,6 +447,13 @@ async function runDoctor(client: AnimemeClient) {
 			detail: `Using ${baseUrl}. Override with ANIMEME_API_BASE_URL when testing another deployment.`,
 			label: "Base URL",
 			status: "ok",
+		},
+		{
+			detail: gmgnCredential.configured
+				? `Configured from ${gmgnCredential.source}. The value is never printed or written to artifacts.`
+				: `Missing. Set GMGN_API_KEY or add it to ${gmgnCredential.localEnvPath} before complete token:deep analysis.`,
+			label: "GMGN API key",
+			status: gmgnCredential.configured ? "ok" : "warn",
 		},
 	];
 
@@ -445,6 +523,17 @@ function renderDoctorMarkdown(report: {
 	createdAt: string;
 	ready: boolean;
 }) {
+	const gmgnCheck = report.checks.find((check) => check.label === "GMGN API key");
+	const nextLines = report.ready
+		? [
+				"- Run `npm run demo` to load the full public ANIMEME context bundle.",
+				gmgnCheck?.status === "ok"
+					? "- `token:deep` can use direct GMGN API-key metrics on this machine."
+					: "- Configure `GMGN_API_KEY` before treating `token:deep` as complete.",
+			]
+		: [
+				"- Fix failed checks, then run `npm run doctor` again. Optional endpoint warnings can still be used as missing-data notes.",
+			];
 	return [
 		"# Animeme Agent Doctor",
 		"",
@@ -461,9 +550,7 @@ function renderDoctorMarkdown(report: {
 		"",
 		"## Next",
 		"",
-		report.ready
-			? "- Run `npm run demo` to load the full public ANIMEME context bundle."
-			: "- Fix failed checks, then run `npm run doctor` again. Optional endpoint warnings can still be used as missing-data notes.",
+		...nextLines,
 	].join("\n");
 }
 
@@ -710,12 +797,188 @@ function renderTopicDetailMarkdown(
 	].join("\n");
 }
 
+function mergeTokenMetrics(
+	address: string,
+	gmgnMetrics: TokenMetricsResponse | null,
+	animemeMetrics: TokenMetricsResponse | null,
+): TokenMetricsResponse {
+	const gmgnMetric = findMetricForAddress(gmgnMetrics, address);
+	const animemeMetric = findMetricForAddress(animemeMetrics, address);
+	const mergedMetric = {
+		...(animemeMetric || {}),
+		...(gmgnMetric || {}),
+		source: gmgnMetric
+			? "gmgn-openapi"
+			: animemeMetric
+				? "animeme-market-intelligence"
+				: undefined,
+	};
+
+	return {
+		errors: {
+			...(animemeMetrics?.errors || {}),
+			...(gmgnMetrics?.errors || {}),
+		},
+		items:
+			gmgnMetric || animemeMetric
+				? {
+						[address]: mergedMetric,
+					}
+				: {},
+		pendingAddresses: [
+			...(gmgnMetrics?.pendingAddresses || []),
+			...(animemeMetrics?.pendingAddresses || []),
+		],
+		rateLimitedUntil:
+			gmgnMetrics?.rateLimitedUntil ?? animemeMetrics?.rateLimitedUntil ?? null,
+		solUsdPrice: gmgnMetrics?.solUsdPrice ?? animemeMetrics?.solUsdPrice ?? null,
+		source: gmgnMetric
+			? "gmgn-openapi"
+			: animemeMetric
+				? "animeme-market-intelligence"
+				: "unavailable",
+		version: 1,
+	};
+}
+
+function buildTokenMetricDiagnostics(options: {
+	address: string;
+	animemeMetrics: TokenMetricsResponse | null;
+	animemeMetricsResult: PromiseSettledResult<TokenMetricsResponse>;
+	gmgnCredential: GmgnCredentialState;
+	gmgnMetrics: TokenMetricsResponse | null;
+	gmgnMetricsResult: PromiseSettledResult<TokenMetricsResponse>;
+}): TokenMetricDiagnostics {
+	const gmgnMetric = findMetricForAddress(options.gmgnMetrics, options.address);
+	const gmgnCoverage = inspectGmgnMetricCoverage(gmgnMetric);
+	const animemeMetric = findMetricForAddress(
+		options.animemeMetrics,
+		options.address,
+	);
+	return {
+		animemeMarket: {
+			error: getMetricError(
+				options.animemeMetricsResult,
+				options.animemeMetrics,
+				options.address,
+			),
+			status: resolveMetricStatus({
+				hasMetric: Boolean(animemeMetric),
+				result: options.animemeMetricsResult,
+			}),
+		},
+		complete: Boolean(gmgnMetric) && gmgnCoverage.complete,
+		gmgn: {
+			credential: options.gmgnCredential,
+			error: getMetricError(
+				options.gmgnMetricsResult,
+				options.gmgnMetrics,
+				options.address,
+			),
+			missingFields: gmgnCoverage.missingFields,
+			status: resolveMetricStatus({
+				completeMetric: gmgnCoverage.complete,
+				credential: options.gmgnCredential,
+				hasMetric: Boolean(gmgnMetric),
+				result: options.gmgnMetricsResult,
+			}),
+		},
+	};
+}
+
+function applyTokenMetricRequirement(
+	report: TokenIntelligenceReport,
+	diagnostics: TokenMetricDiagnostics,
+	deep: boolean,
+): TokenIntelligenceReport {
+	if (diagnostics.complete) {
+		return {
+			...report,
+			strengths: uniqueStrings([
+				...report.strengths,
+				"Required GMGN API-key metrics are loaded for holder, insider, and bundler hard-stop checks.",
+			]),
+		};
+	}
+
+	const missingReason =
+		diagnostics.gmgn.status === "missing-key"
+			? "GMGN_API_KEY is not configured"
+			: diagnostics.gmgn.missingFields.length > 0
+				? `missing ${diagnostics.gmgn.missingFields.join(", ")}`
+				: diagnostics.gmgn.error || "GMGN API-key metrics returned no token data";
+	const nextScore = Math.min(report.score, deep ? 44 : 60);
+	return {
+		...report,
+		confidence: deep ? "low" : report.confidence,
+		score: nextScore,
+		verdict: report.hardStops.length
+			? "avoid"
+			: nextScore < 45
+				? "high-risk"
+				: "watch",
+		warnings: uniqueStrings([
+			...report.warnings,
+			`Full GMGN API-key metrics are incomplete: ${missingReason}. Do not treat hard-stop checks as cleared.`,
+		]),
+	};
+}
+
+function inspectGmgnMetricCoverage(metric: Record<string, unknown> | null) {
+	const missingFields = REQUIRED_GMGN_METRIC_FIELDS.flatMap((field) =>
+		metric && getField(metric, field.keys) != null ? [] : [field.label],
+	);
+	return {
+		complete: missingFields.length === 0,
+		missingFields,
+	};
+}
+
+function resolveMetricStatus(options: {
+	completeMetric?: boolean;
+	credential?: GmgnCredentialState;
+	hasMetric: boolean;
+	result: PromiseSettledResult<TokenMetricsResponse>;
+}): MetricSourceStatus {
+	if (options.hasMetric) {
+		return options.completeMetric === false ? "partial" : "loaded";
+	}
+	if (options.credential && !options.credential.configured) {
+		return "missing-key";
+	}
+	return options.result.status === "rejected" ? "failed" : "empty";
+}
+
+function getMetricError(
+	result: PromiseSettledResult<TokenMetricsResponse>,
+	response: TokenMetricsResponse | null,
+	address: string,
+) {
+	if (result.status === "rejected") {
+		return result.reason instanceof Error ? result.reason.message : String(result.reason);
+	}
+	const normalized = address.trim().toLowerCase();
+	for (const [key, value] of Object.entries(response?.errors || {})) {
+		if (key.toLowerCase() === normalized) {
+			return value;
+		}
+	}
+	return undefined;
+}
+
+function uniqueStrings(values: string[]) {
+	return [...new Set(values.filter(Boolean))];
+}
+
 function renderTokenMarkdown(options: {
 	address: string;
+	animemeMetrics: TokenMetricsResponse | null;
 	attentionTopics: AgentContextTopic[];
 	context: AgentContextResponse | null;
 	deep?: boolean;
+	gmgnMetrics: TokenMetricsResponse | null;
 	learning: unknown;
+	metricDiagnostics: TokenMetricDiagnostics;
 	metrics: TokenMetricsResponse | null;
 	report: TokenIntelligenceReport;
 	warnings: string[];
@@ -729,6 +992,10 @@ function renderTokenMarkdown(options: {
 		options.context ? `Attention context: ${options.context.generatedAt}` : "Attention context: unavailable",
 		`Animeme Intelligence Score: ${options.report.score}/100 (${options.report.verdict}, ${options.report.confidence} confidence)`,
 		"",
+		"## Required Data Sources",
+		"",
+		...renderTokenDataSourceLines(options),
+		"",
 		"## Live Attention Matches",
 		"",
 		...(options.attentionTopics.length
@@ -738,11 +1005,13 @@ function renderTokenMarkdown(options: {
 				)
 			: ["- No live Now Attention topic currently links this address."]),
 		"",
-		"## Market Metrics",
+		"## Market Metrics (GMGN First)",
 		"",
 		...(metric
 			? renderMetricLines(metric)
-			: ["- Structured market metrics are not available yet for this address."]),
+			: [
+					"- GMGN API-key metrics are not available for this address. This is incomplete token due diligence.",
+				]),
 		"",
 		"## Intelligence Read",
 		"",
@@ -754,7 +1023,7 @@ function renderTokenMarkdown(options: {
 			: ["- Strength: No confirmed strength yet."]),
 		...(options.report.warnings.length
 			? options.report.warnings.map((item) => `- Warning: ${item}`)
-			: ["- Warning: No major warning from available neutral metrics."]),
+			: ["- Warning: No major warning from available GMGN/Animeme metrics."]),
 		...(options.report.hardStops.length
 			? options.report.hardStops.map((item) => `- Hard stop: ${item}`)
 			: []),
@@ -769,7 +1038,7 @@ function renderTokenMarkdown(options: {
 		"",
 		"- Treat this as research context, not an execution signal.",
 		"- If live attention is missing, require an external narrative reason before escalating.",
-		"- If liquidity, holder, or volume fields are unavailable, keep the token in observation mode.",
+		"- If GMGN API-key holder, insider, or bundler fields are unavailable, keep the token in observation mode.",
 		"",
 		...(options.deep
 			? renderDeepTokenChecklist(options.report)
@@ -779,6 +1048,71 @@ function renderTokenMarkdown(options: {
 			? ["## Warnings", "", ...options.warnings.map((warning) => `- ${warning}`)]
 			: []),
 	].join("\n");
+}
+
+function renderTokenDataSourceLines(options: {
+	address: string;
+	animemeMetrics: TokenMetricsResponse | null;
+	context: AgentContextResponse | null;
+	gmgnMetrics: TokenMetricsResponse | null;
+	metricDiagnostics: TokenMetricDiagnostics;
+}) {
+	return [
+		options.context
+			? `- Animeme trending: loaded (${options.context.source}, ${options.context.topics.length} topics, generated ${options.context.generatedAt}).`
+			: "- Animeme trending: unavailable. Token analysis is missing live Now Attention context.",
+		`- GMGN API-key metrics: ${formatGmgnMetricStatus(
+			options.metricDiagnostics,
+			options.gmgnMetrics,
+			options.address,
+		)}`,
+		`- Animeme market fallback: ${formatAnimemeMarketStatus(
+			options.metricDiagnostics,
+			options.animemeMetrics,
+			options.address,
+		)}`,
+		`- Complete token due diligence: ${
+			options.metricDiagnostics.complete
+				? "yes, GMGN API-key metrics are present."
+				: "no, GMGN API-key metrics are missing or incomplete."
+		}`,
+	];
+}
+
+function formatGmgnMetricStatus(
+	diagnostics: TokenMetricDiagnostics,
+	metrics: TokenMetricsResponse | null,
+	address: string,
+) {
+	const sourceText = diagnostics.gmgn.credential.configured
+		? `key source ${diagnostics.gmgn.credential.source}`
+		: `missing key; set GMGN_API_KEY or ${diagnostics.gmgn.credential.localEnvPath}`;
+	const metric = findMetricForAddress(metrics, address);
+	if (diagnostics.gmgn.status === "loaded") {
+		return `loaded from GMGN OpenAPI (${sourceText}, ${describeKeys(metric)}).`;
+	}
+	if (diagnostics.gmgn.status === "partial") {
+		return `partial from GMGN OpenAPI (${sourceText}, missing ${diagnostics.gmgn.missingFields.join(", ")}).`;
+	}
+	if (diagnostics.gmgn.error) {
+		return `${diagnostics.gmgn.status} (${sourceText}; ${diagnostics.gmgn.error}).`;
+	}
+	return `${diagnostics.gmgn.status} (${sourceText}).`;
+}
+
+function formatAnimemeMarketStatus(
+	diagnostics: TokenMetricDiagnostics,
+	metrics: TokenMetricsResponse | null,
+	address: string,
+) {
+	const metric = findMetricForAddress(metrics, address);
+	if (diagnostics.animemeMarket.status === "loaded") {
+		return `loaded from /api/market/token-metrics (${describeKeys(metric)}).`;
+	}
+	if (diagnostics.animemeMarket.error) {
+		return `${diagnostics.animemeMarket.status} (${diagnostics.animemeMarket.error}).`;
+	}
+	return `${diagnostics.animemeMarket.status}.`;
 }
 
 function renderThesisMarkdown(
@@ -926,8 +1260,27 @@ function readStringFlag(args: ParsedArgs, name: string) {
 	return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function readRequiredFlag(args: ParsedArgs, name: string) {
+function readStringFlagOrPosition(
+	args: ParsedArgs,
+	name: string,
+	positionIndex: number,
+) {
 	const value = readStringFlag(args, name);
+	if (value) {
+		return value;
+	}
+	const positional = args.positionals[positionIndex];
+	return typeof positional === "string" && positional.trim()
+		? positional.trim()
+		: null;
+}
+
+function readRequiredFlagOrPosition(
+	args: ParsedArgs,
+	name: string,
+	positionIndex: number,
+) {
+	const value = readStringFlagOrPosition(args, name, positionIndex);
 	if (!value) {
 		throw new Error(`Missing required flag --${name}.`);
 	}
@@ -943,12 +1296,27 @@ function readNumberFlag(args: ParsedArgs, name: string, fallback: number) {
 	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-function readModeFlag(
+function readNumberFlagOrPosition(
 	args: ParsedArgs,
 	name: string,
+	positionIndex: number,
+	fallback: number,
+) {
+	const value = readStringFlagOrPosition(args, name, positionIndex);
+	if (!value) {
+		return fallback;
+	}
+	const parsed = Number(value);
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function readModeFlagOrPosition(
+	args: ParsedArgs,
+	name: string,
+	positionIndex: number,
 	fallback: AttentionMode,
 ): AttentionMode {
-	const value = readStringFlag(args, name);
+	const value = readStringFlagOrPosition(args, name, positionIndex);
 	return value === "rising" || value === "latest" || value === "viral"
 		? value
 		: fallback;
@@ -1086,15 +1454,17 @@ function renderMetricLines(metric: Record<string, unknown>) {
 		["Holders", ["holders", "holderCount"]],
 		["24h change", ["priceChange24h", "priceChange24hPct"]],
 		["Top 10 holder share", ["top10HolderPercent"]],
+		["Creator/dev holding share", ["creatorDevHoldingPercent"]],
 		["Fresh wallet share", ["freshWalletPercent"]],
 		["Insider share", ["insiderPercent"]],
+		["Bundled activity share", ["bundlerPercent"]],
 		["Smart holders", ["smartHolders"]],
 		["KOL holders", ["kolHolders"]],
 		["Total fees paid", ["totalFeesPaidSol"]],
 	] satisfies readonly [string, readonly string[]][];
 	const lines = fields.flatMap(([label, keys]) => {
 		const value = getField(metric, keys);
-		return value == null ? [] : [`- ${label}: ${formatMetricValue(value)}`];
+		return value == null ? [] : [`- ${label}: ${formatMetricValue(value, label)}`];
 	});
 	return lines.length > 0
 		? lines
@@ -1112,7 +1482,7 @@ function renderDeepTokenChecklist(report: TokenIntelligenceReport) {
 		`- Fresh-wallet mix: ${formatProfileValue(report.marketProfile.freshWalletPercent)}.`,
 		`- Smart holders: ${formatCountValue(report.marketProfile.smartHolders)}.`,
 		`- KOL holders: ${formatCountValue(report.marketProfile.kolHolders)}.`,
-		"- Next step: compare this score against live attention. Do not escalate if the token has no attention match and weak neutral metrics.",
+		"- Next step: compare this score against live attention. Do not escalate if the token has no attention match and weak GMGN/Animeme metrics.",
 	];
 }
 
@@ -1137,8 +1507,13 @@ function shortJson(value: unknown, maxLength: number) {
 	return text.length > maxLength ? `${text.slice(0, maxLength)}\n...` : text;
 }
 
-function formatMetricValue(value: unknown) {
+function formatMetricValue(value: unknown, label = "") {
 	if (typeof value === "number") {
+		if (isPercentMetricLabel(label)) {
+			return `${Intl.NumberFormat("en", {
+				maximumFractionDigits: 2,
+			}).format(value)}%`;
+		}
 		if (Math.abs(value) >= 1_000) {
 			return formatUsd(value);
 		}
@@ -1147,6 +1522,10 @@ function formatMetricValue(value: unknown) {
 		}).format(value);
 	}
 	return String(value);
+}
+
+function isPercentMetricLabel(label: string) {
+	return /share|change/i.test(label);
 }
 
 function formatProfileValue(value: number | null) {

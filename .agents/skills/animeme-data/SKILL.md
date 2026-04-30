@@ -14,11 +14,21 @@ AgentSkills-compatible runtimes. For deeper token due diligence, also load
 
 - Read live public context from `https://animeme.app`.
 - Access current trend boards, new topics, Attention Spotlight, learning data,
-  and neutral market metrics for arbitrary token addresses.
+  direct GMGN token metrics, and Animeme market fallback metrics for arbitrary
+  token addresses.
 - Prefer the CLI commands in this repo before inventing new fetch flows.
 - Create advisory JSON and Markdown artifacts under `artifacts/`.
 - Never trade, sign transactions, request private keys, or mutate production
   Animeme state.
+
+If the current working folder only contains this `SKILL.md` and no
+`package.json`, clone the repo first:
+
+```bash
+git clone https://github.com/0xchalker/Animeme-Agent.git
+cd Animeme-Agent
+npm install
+```
 
 ## Fast Path
 
@@ -33,6 +43,11 @@ npm run token:deep -- --address <token-address>
 npm run spotlight
 npm run learning
 ```
+
+For complete token analysis, configure `GMGN_API_KEY` in the environment or in
+`~/.config/gmgn/.env`. The doctor command checks only whether it exists.
+If npm strips flags in the current shell, token commands also accept
+`npm run token:deep -- <token-address>`.
 
 ## First Response Guide
 
@@ -64,6 +79,7 @@ If the user provides a token address, use the token flow instead:
 
 ```text
 Token demo flow:
+- Run npm run doctor and check GMGN API key status.
 - Run npm run token:deep -- --address <token-address>.
 - Explain the Animeme Intelligence Score.
 - Separate strengths, warnings, hard stops, and missing data.
@@ -98,7 +114,8 @@ npm run watch -- --topic <topic-id>
 4. Run `npm run scan` to get a focused live attention context.
 5. Use `token` for arbitrary token address analysis.
 6. Use `token:deep` when the user asks if a token is safe, risky, manipulated,
-   crowded, or worth deeper research.
+   crowded, or worth deeper research. Complete analysis requires both Animeme
+   trending data and GMGN API-key metrics.
 7. Use `spotlight` when the user asks what Attention Spotlight is showing.
 8. Use `learning`, `topics`, or `topic` when the user asks for historic lessons
    or narrative research.
@@ -112,11 +129,12 @@ npm run watch -- --topic <topic-id>
   token surface, or Spotlight context to justify more research.
 - New topic means it appears on the latest board or recently entered learning
   data.
-- Token analysis should combine live topic matches, neutral market metrics, and
-  learning archive matches.
+- Token analysis should combine live topic matches, GMGN API-key market
+  metrics, Animeme market fallback data, and learning archive matches.
 - Missing data is not bullish. State what is missing and keep the item in
   observation mode.
-- Do not expose or depend on private provider names in user-facing artifacts.
+- Do not call token hard stops cleared when GMGN API-key holder, insider, or
+  bundler fields are missing.
 
 ## Memory
 

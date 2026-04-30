@@ -6,6 +6,8 @@ Everything is read-only and advisory.
 ## First-Run Commands
 
 - `npm run doctor`: checks Node version and public ANIMEME API reachability.
+  It also reports whether `GMGN_API_KEY` is configured for complete token
+  analysis without printing the key.
 - `npm run demo`: loads the easiest first-run public context bundle.
 - `npm run brief`: daily context bundle across Now Attention, Spotlight, and
   Narrative Learning.
@@ -45,10 +47,16 @@ Everything is read-only and advisory.
 ## Token Analysis
 
 - `GET /api/market/token-metrics?addresses=<address>`
-- Use for arbitrary token market metrics through Animeme public routes.
-- Combine with live attention matches and learning topic matches.
+- Use as the Animeme public market fallback.
+- Direct GMGN OpenAPI metrics are loaded by the local CLI when `GMGN_API_KEY`
+  is configured.
+- Combine GMGN metrics with live attention matches and learning topic matches.
 - CLI: `npm run token -- --address <token-address>`
 - Deep CLI: `npm run token:deep -- --address <token-address>`
+
+For `token:deep`, do not call the analysis complete unless GMGN returns the
+required hard-stop fields: top-10 holder share, creator/dev holding share,
+insider pressure, and bundled activity.
 
 ## Token Intelligence Skill
 
@@ -74,6 +82,7 @@ work:
 For token users, ask for a token address and run:
 
 ```bash
+npm run doctor
 npm run token:deep -- --address <token-address>
 ```
 

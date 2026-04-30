@@ -85,7 +85,7 @@ export const PUBLIC_DATA_CATALOG: PublicDataCatalogEntry[] = [
 		useFor: ["distribution diagnostics", "winner score", "attention share"],
 	},
 	{
-		description: "Neutral market metrics for arbitrary token addresses and Animeme Intelligence scoring.",
+		description: "Animeme market fallback metrics for arbitrary token addresses and Animeme Intelligence scoring.",
 		id: "market-token-metrics",
 		method: "GET",
 		path: "/api/market/token-metrics?addresses=<address>",
@@ -158,10 +158,13 @@ export type SpotlightParams = {
 };
 
 export type TokenMetricsResponse = {
+	errors?: Record<string, string>;
 	items?: Record<string, JsonObject>;
 	pendingAddresses?: string[];
 	rateLimitedUntil?: number | null;
 	solUsdPrice?: number | null;
+	source?: string;
+	version?: number;
 };
 
 export type AnimemeClient = {
