@@ -23,6 +23,9 @@ AgentSkills-compatible runtimes. For deeper token due diligence, also load
 ## Fast Path
 
 ```bash
+npm run doctor
+npm run demo
+npm run brief
 npm run catalog
 npm run scan
 npm run token -- --address <token-address>
@@ -49,9 +52,9 @@ Then propose the default demo:
 
 ```text
 Default demo flow:
-- Run npm run catalog.
-- Run npm run scan.
-- Pick the strongest topic from the scan.
+- Run npm run doctor.
+- Run npm run demo.
+- Pick the strongest topic from the demo or scan.
 - Run npm run thesis -- --topic <topic-id>.
 - Run npm run risk -- --topic <topic-id>.
 - Summarize the artifact files created under artifacts/.
@@ -89,16 +92,19 @@ npm run watch -- --topic <topic-id>
 
 1. Run `npm run catalog` when you need to know which public data surface fits
    the task.
-2. Run `npm run scan` to get the current live attention context.
-3. Use `token` for arbitrary token address analysis.
-4. Use `token:deep` when the user asks if a token is safe, risky, manipulated,
+2. Run `npm run doctor` when setup or API reachability is unknown.
+3. Run `npm run demo`, `npm run brief`, or `npm run context` when the user
+   wants the easiest full public data snapshot.
+4. Run `npm run scan` to get a focused live attention context.
+5. Use `token` for arbitrary token address analysis.
+6. Use `token:deep` when the user asks if a token is safe, risky, manipulated,
    crowded, or worth deeper research.
-5. Use `spotlight` when the user asks what Attention Spotlight is showing.
-6. Use `learning`, `topics`, or `topic` when the user asks for historic lessons
+7. Use `spotlight` when the user asks what Attention Spotlight is showing.
+8. Use `learning`, `topics`, or `topic` when the user asks for historic lessons
    or narrative research.
-7. Use `thesis`, `risk`, and `watch` to turn a selected topic into an advisory
+9. Use `thesis`, `risk`, and `watch` to turn a selected topic into an advisory
    artifact.
-8. Keep all outputs advisory, timestamped, and user-controlled.
+10. Keep all outputs advisory, timestamped, and user-controlled.
 
 ## Interpretation Rules
 

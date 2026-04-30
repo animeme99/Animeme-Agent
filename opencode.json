@@ -9,7 +9,11 @@
 				"webfetch": "allow",
 				"bash": {
 					"*": "ask",
+					"npm run brief*": "allow",
 					"npm run catalog*": "allow",
+					"npm run context*": "allow",
+					"npm run demo*": "allow",
+					"npm run doctor*": "allow",
 					"npm run fetch*": "allow",
 					"npm run hot*": "allow",
 					"npm run learning*": "allow",

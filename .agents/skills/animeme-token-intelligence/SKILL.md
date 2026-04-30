@@ -21,6 +21,7 @@ artifacts.
 ## Fast Path
 
 ```bash
+npm run doctor
 npm run token -- --address <token-address>
 npm run token:deep -- --address <token-address>
 ```
@@ -36,12 +37,14 @@ the token address before running commands.
 When an address is available, run:
 
 ```bash
+npm run doctor
 npm run token:deep -- --address <token-address>
 ```
 
 Then summarize:
 
 - Animeme Intelligence Score and verdict.
+- Whether public API connectivity is ready or degraded.
 - Live attention matches.
 - Learning matches.
 - Neutral market metrics.

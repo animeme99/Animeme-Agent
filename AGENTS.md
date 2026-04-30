@@ -17,9 +17,11 @@ actions.
 3. Load `.agents/skills/animeme-data/SKILL.md`.
 4. For token due diligence, also load
    `.agents/skills/animeme-token-intelligence/SKILL.md`.
-5. Run `npm run catalog` to see the public data surface.
-6. Run `npm run scan` for current attention.
-7. Use the most specific command for the task:
+5. Run `npm run doctor` to confirm Node and public API reachability.
+6. Run `npm run demo` for one full public ANIMEME context bundle.
+7. Run `npm run scan` for focused current attention.
+8. Use the most specific command for the task:
+   - `npm run brief`
    - `npm run token -- --address <token-address>`
    - `npm run token:deep -- --address <token-address>`
    - `npm run topics -- --search <query>`
@@ -49,9 +51,9 @@ Then offer this demo flow:
 
 ```text
 Default demo flow:
-- Run npm run catalog.
-- Run npm run scan.
-- Pick the strongest topic from the scan.
+- Run npm run doctor.
+- Run npm run demo.
+- Pick the strongest topic from the demo or scan.
 - Run npm run thesis -- --topic <topic-id>.
 - Run npm run risk -- --topic <topic-id>.
 - Summarize the artifact files created under artifacts/.
@@ -77,6 +79,10 @@ Do not require secrets.
 
 ## Command Map
 
+- `npm run doctor`: verify local runtime and public ANIMEME API reachability.
+- `npm run demo`: one-command first-run bundle for new users.
+- `npm run brief`: daily public context bundle across attention, spotlight, and learning.
+- `npm run context`: same full public bundle for agent context refreshes.
 - `npm run catalog`: print all supported public API surfaces.
 - `npm run scan`: current hot topics across rising/latest/viral.
 - `npm run hot -- --limit 20`: ranked hot topics with a custom limit.

@@ -15,14 +15,14 @@ export type PublicDataCatalogEntry = {
 
 export const PUBLIC_DATA_CATALOG: PublicDataCatalogEntry[] = [
 	{
-		description: "Live Now Attention topic boards by mode.",
+		description: "Live Now Attention boards by mode with topic summaries and token surfaces.",
 		id: "now-attention-feed",
 		method: "GET",
 		path: "/api/now-attention-feed?modes=rising,latest,viral",
-		useFor: ["hot trends", "new topics", "viral boards", "topic tokens"],
+		useFor: ["Attention Reads", "new topics", "viral boards", "topic tokens"],
 	},
 	{
-		description: "Canonical Attention Spotlight rail and recent history.",
+		description: "Canonical Attention Spotlight rail, recent history, and breakout signal context.",
 		id: "spotlight",
 		method: "GET",
 		path: "/api/spotlight?limit=15&historyLimit=30",
@@ -43,14 +43,14 @@ export const PUBLIC_DATA_CATALOG: PublicDataCatalogEntry[] = [
 		useFor: ["milestone alerts", "recent winners"],
 	},
 	{
-		description: "Learning dashboard summary across tracked narratives.",
+		description: "Narrative Learning summary across tracked attention cycles.",
 		id: "learning-summary",
 		method: "GET",
 		path: "/api/learning/summary",
 		useFor: ["learning overview", "best performance", "market lessons"],
 	},
 	{
-		description: "Searchable narrative learning topic archive.",
+		description: "Searchable Explore Narrative and Narrative Learning topic archive.",
 		id: "learning-topics",
 		method: "GET",
 		path: "/api/learning/topics?page=1&pageSize=20&search=<query>",
@@ -78,11 +78,11 @@ export const PUBLIC_DATA_CATALOG: PublicDataCatalogEntry[] = [
 		useFor: ["outcome analysis", "attention-to-performance checks"],
 	},
 	{
-		description: "Attention distribution chart snapshot.",
+		description: "Optional attention distribution snapshot when the public API provides it.",
 		id: "learning-attention-distribution",
 		method: "GET",
 		path: "/api/learning/attention-distribution",
-		useFor: ["24h distribution", "winner score", "attention share"],
+		useFor: ["distribution diagnostics", "winner score", "attention share"],
 	},
 	{
 		description: "Neutral market metrics for arbitrary token addresses and Animeme Intelligence scoring.",
@@ -250,7 +250,7 @@ export function createAnimemeClient(
 			DEFAULT_ANIMEME_API_BASE_URL,
 	);
 	const fetchImpl = options.fetchImpl || fetch;
-	const timeoutMs = options.timeoutMs || 10_000;
+	const timeoutMs = options.timeoutMs || 20_000;
 
 	const requestJson = async <T>(path: string, params: QueryParams = {}) => {
 		const controller = new AbortController();

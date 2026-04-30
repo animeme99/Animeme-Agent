@@ -13,6 +13,13 @@ timestamped research artifacts.
 npx skills add 0xchalker/Animeme-Agent
 ```
 
+After install, the easiest agent prompt is:
+
+```text
+Use the ANIMEME skills. Run the doctor check, then run the demo brief and tell
+me the strongest topic, lead token, risk, and next command.
+```
+
 The Agent Skill is a support layer. The core product remains
 [animeme.app](https://animeme.app): live pre-chart meme intelligence.
 
@@ -93,8 +100,8 @@ git clone https://github.com/0xchalker/Animeme-Agent.git
 cd Animeme-Agent
 npm install
 npm run typecheck
-npm run catalog
-npm run scan
+npm run doctor
+npm run demo
 ```
 
 ## First Prompt After Install
@@ -116,9 +123,9 @@ ANIMEME Agent Skill can help with:
 5. Produce thesis, risk, and watch artifacts.
 
 Default demo:
-- Run npm run catalog.
-- Run npm run scan.
-- Pick the strongest Attention Read.
+- Run npm run doctor.
+- Run npm run demo.
+- Pick the strongest Attention Read from the demo or scan.
 - Run npm run thesis -- --topic <topic-id>.
 - Run npm run risk -- --topic <topic-id>.
 - Summarize the artifact files created under artifacts/.
@@ -181,6 +188,10 @@ Agent use:
 
 | Command | Purpose | Output |
 | --- | --- | --- |
+| `npm run doctor` | Check local runtime and public API reachability. | Doctor artifact |
+| `npm run demo` | First-run bundle for new users: attention, spotlight, learning, resources, and next commands. | Full public context artifact |
+| `npm run brief` | Daily public context brief for operator-style use. | Full public context artifact |
+| `npm run context` | Refresh full public context for an agent session. | Full public context artifact |
 | `npm run catalog` | Print the public data catalog and endpoint use cases. | JSON + Markdown |
 | `npm run scan` | Scan current attention boards. | Hot topic artifact |
 | `npm run hot -- --limit 20` | Rank the strongest current topics. | Hot topic artifact |
@@ -200,9 +211,9 @@ Agent use:
 
 | Plane | Public route family | What it answers | Main commands |
 | --- | --- | --- | --- |
-| Live Attention | `/api/now-attention-feed` | What has attention now? What is new? Which topics have live flow? | `scan`, `hot`, `new` |
-| Spotlight | `/api/spotlight`, `/api/spotlight-topic-signals` | Why this, why now, and what happened since first trigger? | `spotlight`, `topic` |
-| Learning | `/api/learning/*` | What patterns worked before? Which topics repeated? What did ANIMEME learn? | `learning`, `topics`, `topic` |
+| Live Attention | `/api/now-attention-feed` | What has attention now? What is new? Which topics have live flow? | `demo`, `brief`, `scan`, `hot`, `new` |
+| Spotlight | `/api/spotlight`, `/api/spotlight-topic-signals` | Why this, why now, and what happened since first trigger? | `demo`, `brief`, `spotlight`, `topic` |
+| Learning | `/api/learning/*` | What patterns worked before? Which topics repeated? What did ANIMEME learn? | `demo`, `brief`, `learning`, `topics`, `topic` |
 | Market Metrics | `/api/market/token-metrics` | Is this token crowded, manipulated, or worth deeper research? | `token`, `token:deep` |
 | Raw API | public `/api/*` allowlist | Let advanced agents inspect new public endpoints without code changes. | `fetch` |
 
@@ -280,7 +291,7 @@ surface, and historical context.
 
 ```text
 Load AGENTS.md and the animeme-data skill.
-Run npm run scan, npm run spotlight, and npm run learning.
+Run npm run brief.
 Summarize the top 5 Attention Reads, explain why each is moving, and write a
 watch plan for the strongest topic.
 ```
@@ -365,16 +376,16 @@ The client only accepts public ANIMEME API paths under `/api/*`.
 
 | Endpoint | Command |
 | --- | --- |
-| `/api/now-attention-feed?modes=rising,latest,viral` | `scan`, `hot`, `new` |
-| `/api/spotlight?limit=15&historyLimit=30` | `spotlight` |
+| `/api/now-attention-feed?modes=rising,latest,viral` | `demo`, `brief`, `scan`, `hot`, `new` |
+| `/api/spotlight?limit=15&historyLimit=30` | `demo`, `brief`, `spotlight` |
 | `/api/spotlight-topic-signals?topicIds=<topic-id>` | `topic` |
-| `/api/spotlight-performance-notifications` | `spotlight` |
-| `/api/learning/summary` | `learning` |
-| `/api/learning/topics` | `learning`, `topics`, `token`, `token:deep` |
+| `/api/spotlight-performance-notifications` | `demo`, `brief`, `spotlight` |
+| `/api/learning/summary` | `demo`, `brief`, `learning` |
+| `/api/learning/topics` | `demo`, `brief`, `learning`, `topics`, `token`, `token:deep` |
 | `/api/learning/topics/<topic-id>` | `topic` |
-| `/api/learning/key-resources` | `learning` |
-| `/api/learning/spotlight-outcomes` | `learning` |
-| `/api/learning/attention-distribution` | `learning` |
+| `/api/learning/key-resources` | `demo`, `brief`, `learning` |
+| `/api/learning/spotlight-outcomes` | `demo`, `brief`, `learning` |
+| `/api/learning/attention-distribution` | `demo`, `brief`, `learning` |
 | `/api/market/token-metrics?addresses=<address>` | `token`, `token:deep` |
 
 ## Reliability Model
@@ -417,7 +428,8 @@ older sessions. Do not store secrets.
 ```bash
 npm install
 npm run typecheck
-npm run scan
+npm run doctor
+npm run demo
 npm run token:deep -- --address <token-address>
 ```
 
@@ -465,7 +477,8 @@ npx skills add 0xchalker/Animeme-Agent
 git clone https://github.com/0xchalker/Animeme-Agent.git
 cd Animeme-Agent
 npm install
-npm run scan
+npm run doctor
+npm run demo
 npm run token:deep -- --address <token-address>
 ```
 

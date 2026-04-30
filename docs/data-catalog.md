@@ -3,12 +3,22 @@
 This repo exposes agent skills over the public Animeme API surface.
 Everything is read-only and advisory.
 
+## First-Run Commands
+
+- `npm run doctor`: checks Node version and public ANIMEME API reachability.
+- `npm run demo`: loads the easiest first-run public context bundle.
+- `npm run brief`: daily context bundle across Now Attention, Spotlight, and
+  Narrative Learning.
+- `npm run context`: same full public bundle when an agent wants to refresh
+  its working context.
+
 ## Live Attention
 
 - `GET /api/now-attention-feed?modes=rising,latest,viral`
-- Use for current hot trends, new topics, viral topics, topic token lists, and
-  scan artifacts.
-- CLI: `npm run scan`, `npm run hot`, `npm run new`
+- Use for current Attention Reads, new topics, viral topics, topic token
+  lists, and scan artifacts.
+- CLI: `npm run demo`, `npm run brief`, `npm run scan`, `npm run hot`,
+  `npm run new`
 
 ## Attention Spotlight
 
@@ -17,7 +27,7 @@ Everything is read-only and advisory.
 - `GET /api/spotlight-performance-notifications`
 - Use for canonical Spotlight cards, first-signal context, recent milestone
   alerts, and topic-level performance history.
-- CLI: `npm run spotlight`, `npm run topic`
+- CLI: `npm run demo`, `npm run brief`, `npm run spotlight`, `npm run topic`
 
 ## Narrative Learning
 
@@ -28,8 +38,9 @@ Everything is read-only and advisory.
 - `GET /api/learning/spotlight-outcomes`
 - `GET /api/learning/attention-distribution`
 - Use for historic lessons, topic search, resource extraction, outcome
-  analysis, and attention distribution.
-- CLI: `npm run learning`, `npm run topics`, `npm run topic`
+  analysis, and optional distribution diagnostics.
+- CLI: `npm run demo`, `npm run brief`, `npm run learning`, `npm run topics`,
+  `npm run topic`
 
 ## Token Analysis
 
@@ -53,11 +64,12 @@ Use this flow when a user has just installed Animeme Agent and wants to see it
 work:
 
 1. `npm run catalog`
-2. `npm run scan`
-3. Pick the strongest topic from the scan output.
-4. `npm run thesis -- --topic <topic-id>`
-5. `npm run risk -- --topic <topic-id>`
-6. Summarize the Markdown artifacts written under `artifacts/`.
+2. `npm run doctor`
+3. `npm run demo`
+4. Pick the strongest topic from the demo or scan output.
+5. `npm run thesis -- --topic <topic-id>`
+6. `npm run risk -- --topic <topic-id>`
+7. Summarize the Markdown artifacts written under `artifacts/`.
 
 For token users, ask for a token address and run:
 

@@ -2,12 +2,14 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
 	createAnimemeClient,
+	DEFAULT_ANIMEME_API_BASE_URL,
 	findTopic,
 	findTopicsByTokenAddress,
 	PUBLIC_DATA_CATALOG,
 	rankHotTopics,
 	type AgentContextResponse,
 	type AgentContextTopic,
+	type AnimemeClient,
 	type AttentionMode,
 	type TokenMetricsResponse,
 } from "./animeme-client.js";
@@ -30,6 +32,29 @@ type ArtifactPayload = {
 	topic?: AgentContextTopic | null;
 };
 
+type OptionalFailure = {
+	error: string;
+};
+
+type PublicContextBundle = {
+	agentContext: AgentContextResponse | OptionalFailure;
+	createdAt: string;
+	learningAttentionDistribution: unknown;
+	learningKeyResources: unknown;
+	learningSpotlightOutcomes: unknown;
+	learningSummary: unknown;
+	learningTopics: unknown;
+	spotlight: unknown;
+	spotlightNotifications: unknown;
+};
+
+type DoctorCheck = {
+	detail: string;
+	endpoint?: string;
+	label: string;
+	status: "fail" | "ok" | "warn";
+};
+
 async function main() {
 	const [command = "scan", ...rawArgs] = process.argv.slice(2);
 	const args = parseArgs(rawArgs);
@@ -42,6 +67,35 @@ async function main() {
 				catalog: PUBLIC_DATA_CATALOG,
 				createdAt: new Date().toISOString(),
 				kind: "catalog",
+			});
+			await writeFile(artifact.markdownPath, markdown, "utf8");
+			console.log(markdown);
+			console.log(`\nArtifacts written: ${artifact.markdownPath}, ${artifact.jsonPath}`);
+			return;
+		}
+		case "doctor": {
+			const report = await runDoctor(client);
+			const markdown = renderDoctorMarkdown(report);
+			const artifact = await writeArtifacts("doctor", {
+				...report,
+				kind: "doctor",
+			});
+			await writeFile(artifact.markdownPath, markdown, "utf8");
+			console.log(markdown);
+			console.log(`\nArtifacts written: ${artifact.markdownPath}, ${artifact.jsonPath}`);
+			return;
+		}
+		case "brief":
+		case "context":
+		case "demo": {
+			const bundle = await loadPublicContextBundle(client, args);
+			const markdown = renderPublicContextMarkdown(bundle, command);
+			const artifact = await writeArtifacts(command, {
+				...bundle,
+				contextGeneratedAt: isAgentContextResponse(bundle.agentContext)
+					? bundle.agentContext.generatedAt
+					: undefined,
+				kind: command,
 			});
 			await writeFile(artifact.markdownPath, markdown, "utf8");
 			console.log(markdown);
@@ -287,6 +341,12 @@ function renderCatalogMarkdown() {
 		"",
 		"One clone, all public Animeme data. These are read-only endpoints for user-controlled agents.",
 		"",
+		"Fast start:",
+		"",
+		"- `npm run doctor` checks local setup and public API reachability.",
+		"- `npm run demo` builds one full public context bundle for a new user.",
+		"- `npm run brief` is the daily operator brief.",
+		"",
 		...PUBLIC_DATA_CATALOG.flatMap((entry) => [
 			`## ${entry.id}`,
 			"",
@@ -298,6 +358,240 @@ function renderCatalogMarkdown() {
 		"## Raw Fetch",
 		"",
 		"Use `npm run fetch -- --path /api/learning/topics?pageSize=5` for any public Animeme API path.",
+	].join("\n");
+}
+
+async function runDoctor(client: AnimemeClient) {
+	const createdAt = new Date().toISOString();
+	const nodeMajor = Number(process.versions.node.split(".")[0]);
+	const baseUrl =
+		process.env.ANIMEME_API_BASE_URL || DEFAULT_ANIMEME_API_BASE_URL;
+	const checks: DoctorCheck[] = [
+		{
+			detail: `Detected ${process.version}. This kit expects Node 20 or newer.`,
+			label: "Node runtime",
+			status: nodeMajor >= 20 ? "ok" : "fail",
+		},
+		{
+			detail: `Using ${baseUrl}. Override with ANIMEME_API_BASE_URL when testing another deployment.`,
+			label: "Base URL",
+			status: "ok",
+		},
+	];
+
+	const endpointChecks = await Promise.allSettled([
+		client.getAgentContext(),
+		client.getSpotlight({ historyLimit: 1, limit: 1 }),
+		client.getLearningSummary(),
+		client.getLearningTopics({ pageSize: 1 }),
+	]);
+	const labels = [
+		{
+			endpoint: "/api/now-attention-feed",
+			label: "Now Attention",
+			summarize: (value: unknown) =>
+				isAgentContextResponse(value)
+					? `${value.topics.length} current topics across rising/latest/viral.`
+					: "Public attention endpoint returned data.",
+		},
+		{
+			endpoint: "/api/spotlight",
+			label: "Attention Spotlight",
+			summarize: (value: unknown) =>
+				`${extractItems(value).length || "unknown"} spotlight items available.`,
+		},
+		{
+			endpoint: "/api/learning/summary",
+			label: "Narrative Learning summary",
+			summarize: (value: unknown) => `Top-level keys: ${describeKeys(value)}.`,
+		},
+		{
+			endpoint: "/api/learning/topics",
+			label: "Explore Narrative topics",
+			summarize: (value: unknown) =>
+				`${extractItems(value).length || "unknown"} topic items available.`,
+		},
+	];
+
+	for (const [index, result] of endpointChecks.entries()) {
+		const meta = labels[index];
+		checks.push({
+			detail:
+				result.status === "fulfilled"
+					? meta.summarize(result.value)
+					: result.reason instanceof Error
+						? result.reason.message
+						: String(result.reason),
+			endpoint: meta.endpoint,
+			label: meta.label,
+			status: result.status === "fulfilled" ? "ok" : "warn",
+		});
+	}
+
+	return {
+		baseUrl,
+		checks,
+		createdAt,
+		ready:
+			checks.some(
+				(check) => check.status === "ok" && check.endpoint === "/api/now-attention-feed",
+			) && nodeMajor >= 20,
+	};
+}
+
+function renderDoctorMarkdown(report: {
+	baseUrl: string;
+	checks: DoctorCheck[];
+	createdAt: string;
+	ready: boolean;
+}) {
+	return [
+		"# Animeme Agent Doctor",
+		"",
+		`Generated: ${report.createdAt}`,
+		`Base URL: ${report.baseUrl}`,
+		`Status: ${report.ready ? "ready" : "degraded"}`,
+		"",
+		"## Checks",
+		"",
+		...report.checks.map(
+			(check) =>
+				`- ${check.status.toUpperCase()} ${check.label}: ${check.detail}`,
+		),
+		"",
+		"## Next",
+		"",
+		report.ready
+			? "- Run `npm run demo` to load the full public ANIMEME context bundle."
+			: "- Fix failed checks, then run `npm run doctor` again. Optional endpoint warnings can still be used as missing-data notes.",
+	].join("\n");
+}
+
+async function loadPublicContextBundle(
+	client: AnimemeClient,
+	args: ParsedArgs,
+): Promise<PublicContextBundle> {
+	const [
+		agentContext,
+		spotlight,
+		spotlightNotifications,
+		learningSummary,
+		learningTopics,
+		learningKeyResources,
+		learningSpotlightOutcomes,
+		learningAttentionDistribution,
+	] = await Promise.all([
+		settleOptional(() => client.getAgentContext()),
+		settleOptional(() =>
+			client.getSpotlight({
+				historyLimit: readNumberFlag(args, "history-limit", 30),
+				limit: readNumberFlag(args, "spotlight-limit", 15),
+			}),
+		),
+		settleOptional(() => client.getSpotlightPerformanceNotifications()),
+		settleOptional(() => client.getLearningSummary()),
+		settleOptional(() =>
+			client.getLearningTopics({
+				pageSize: readNumberFlag(args, "page-size", 20),
+				search: readStringFlag(args, "search"),
+			}),
+		),
+		settleOptional(() =>
+			client.getLearningKeyResources(readStringFlag(args, "bucket") ?? undefined),
+		),
+		settleOptional(() => client.getLearningSpotlightOutcomes()),
+		settleOptional(() => client.getLearningAttentionDistribution()),
+	]);
+
+	return {
+		agentContext,
+		createdAt: new Date().toISOString(),
+		learningAttentionDistribution,
+		learningKeyResources,
+		learningSpotlightOutcomes,
+		learningSummary,
+		learningTopics,
+		spotlight,
+		spotlightNotifications,
+	};
+}
+
+function renderPublicContextMarkdown(
+	bundle: PublicContextBundle,
+	command: string,
+) {
+	const context = isAgentContextResponse(bundle.agentContext)
+		? bundle.agentContext
+		: null;
+	const hotTopics = context ? rankHotTopics(context, 8) : [];
+	const strongestTopic = hotTopics[0] || null;
+	const leadToken = strongestTopic?.topTokens[0] || null;
+	const learningItems = extractItems(bundle.learningTopics);
+	const spotlightItems = extractItems(bundle.spotlight);
+	const modeLabel =
+		command === "demo"
+			? "Demo"
+			: command === "context"
+				? "Full Public Context"
+				: "Daily Brief";
+
+	return [
+		`# Animeme Agent ${modeLabel}`,
+		"",
+		`Generated: ${bundle.createdAt}`,
+		context ? `Attention context: ${context.generatedAt}` : "Attention context: unavailable",
+		context ? `Source: ${context.source}` : formatMissing(bundle.agentContext),
+		"",
+		"## What Is Loaded",
+		"",
+		`- Now Attention: ${context ? `${context.topics.length} topics across rising/latest/viral` : formatMissing(bundle.agentContext)}`,
+		`- Attention Spotlight: ${describeItemsOrMissing(bundle.spotlight)}`,
+		`- Spotlight notifications: ${describeItemsOrMissing(bundle.spotlightNotifications)}`,
+		`- Learning summary: ${describeKeysOrMissing(bundle.learningSummary)}`,
+		`- Narrative topics: ${describeItemsOrMissing(bundle.learningTopics)}`,
+		`- Key resources: ${describeKeysOrMissing(bundle.learningKeyResources)}`,
+		`- Spotlight outcomes: ${describeKeysOrMissing(bundle.learningSpotlightOutcomes)}`,
+		`- Attention distribution: ${describeKeysOrMissing(bundle.learningAttentionDistribution)}`,
+		"",
+		"## Strongest Current Attention Reads",
+		"",
+		...(hotTopics.length
+			? hotTopics.map((topic) => {
+					const token = topic.topTokens[0];
+					const tokenText = token?.address
+						? ` lead ${token.symbol} ${token.address}`
+						: " no lead token";
+					return `- ${topic.name} (${topic.mode} #${topic.rank}, id ${topic.id}) score ${topic.attentionScore}, ${formatUsd(topic.netInflow1h)} 1h inflow,${tokenText}`;
+				})
+			: ["- No live topics available from Now Attention."]),
+		"",
+		"## Spotlight Preview",
+		"",
+		...previewItems(spotlightItems, 6),
+		"",
+		"## Narrative Memory Preview",
+		"",
+		...previewItems(learningItems, 6),
+		"",
+		"## Easiest Next Commands",
+		"",
+		strongestTopic
+			? `- Topic thesis: \`npm run thesis -- --topic ${strongestTopic.id}\``
+			: "- Topic thesis: run `npm run scan` after public attention data returns.",
+		strongestTopic
+			? `- Topic risk: \`npm run risk -- --topic ${strongestTopic.id}\``
+			: "- Topic risk: run after selecting a topic id.",
+		leadToken?.address
+			? `- Lead token deep review: \`npm run token:deep -- --address ${leadToken.address}\``
+			: "- Token deep review: `npm run token:deep -- --address <token-address>`",
+		"- Search memory: `npm run topics -- --search <narrative>`",
+		"- Raw endpoint: `npm run fetch -- --path /api/learning/topics?pageSize=5`",
+		"",
+		"## Agent Guidance",
+		"",
+		"- Explain attention, catalyst, crowd state, confirmation, and invalidation.",
+		"- Treat missing public data as missing data, not as a bullish signal.",
+		"- Keep outputs advisory. Do not trade, sign, or request private keys.",
 	].join("\n");
 }
 
@@ -670,6 +964,39 @@ async function settleOptional<T>(loader: () => Promise<T>) {
 	}
 }
 
+function isOptionalFailure(value: unknown): value is OptionalFailure {
+	return Boolean(
+		value &&
+			typeof value === "object" &&
+			typeof (value as OptionalFailure).error === "string",
+	);
+}
+
+function isAgentContextResponse(value: unknown): value is AgentContextResponse {
+	return Boolean(
+		value &&
+			typeof value === "object" &&
+			Array.isArray((value as AgentContextResponse).topics) &&
+			Array.isArray((value as AgentContextResponse).spotlight),
+	);
+}
+
+function formatMissing(value: unknown) {
+	return isOptionalFailure(value) ? `unavailable (${value.error})` : "unavailable";
+}
+
+function describeKeysOrMissing(value: unknown) {
+	return isOptionalFailure(value) ? formatMissing(value) : describeKeys(value);
+}
+
+function describeItemsOrMissing(value: unknown) {
+	if (isOptionalFailure(value)) {
+		return formatMissing(value);
+	}
+	const items = extractItems(value);
+	return items.length > 0 ? `${items.length} items` : `keys: ${describeKeys(value)}`;
+}
+
 function collectSettledWarnings(
 	results: Record<string, PromiseSettledResult<unknown>>,
 ) {
@@ -865,6 +1192,10 @@ function printHelp() {
 	console.log(`Animeme Agent
 
 Commands:
+  npm run doctor
+  npm run demo
+  npm run brief
+  npm run context
   npm run catalog
   npm run scan
   npm run hot -- --limit 20

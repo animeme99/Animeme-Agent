@@ -8,7 +8,11 @@
 		"node": ">=20"
 	},
 	"scripts": {
+		"brief": "tsx src/cli.ts brief",
 		"catalog": "tsx src/cli.ts catalog",
+		"context": "tsx src/cli.ts context",
+		"demo": "tsx src/cli.ts demo",
+		"doctor": "tsx src/cli.ts doctor",
 		"fetch": "tsx src/cli.ts fetch",
 		"hot": "tsx src/cli.ts hot",
 		"learning": "tsx src/cli.ts learning",

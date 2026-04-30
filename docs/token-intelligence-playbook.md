@@ -14,6 +14,7 @@ research.
 ## Commands
 
 ```bash
+npm run doctor
 npm run token -- --address <token-address>
 npm run token:deep -- --address <token-address>
 npm run topics -- --token <token-address>
@@ -36,6 +37,7 @@ npm run topics -- --token <token-address>
 ## Warnings
 
 - No live Animeme attention match.
+- Public API connectivity is degraded.
 - No neutral market metrics yet.
 - Top-10 holder share above 20%.
 - Creator/dev holding share above 10%.
