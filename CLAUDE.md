@@ -20,3 +20,8 @@ If the installed skill folder only contains `SKILL.md`, clone
 token analysis, `npm run doctor` must check GMGN API key status, and
 `token:deep` is incomplete unless direct GMGN API-key metrics plus Animeme
 trending data are loaded.
+
+For provider data, use only read-only commands: `npm run gmgn`,
+`npm run binance`, `npm run binance:spot`, and `npm run binance:web3`. Keep
+Animeme, GMGN, and Binance sections separate and never request Binance account
+or order credentials.

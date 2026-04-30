@@ -9,6 +9,7 @@ research.
 - Live attention matches from Now Attention.
 - Direct GMGN API-key market metrics.
 - Animeme public market fallback metrics.
+- Optional Binance Spot/Web3 public market context.
 - Learning archive matches.
 - Optional Spotlight/topic history when the token is attached to a topic.
 
@@ -26,12 +27,18 @@ checks whether the key is configured without printing it. If the key is missing
 or GMGN returns partial metrics, keep the analysis incomplete and do not clear
 hard-stop checks.
 
+Binance public data is optional supporting context. Use it to inspect Spot
+symbol price/ticker/klines or Binance Web3 token metadata/dynamic fields, but
+never use it to override missing GMGN hard-stop metrics.
+
 ## Commands
 
 ```bash
 npm run doctor
 npm run token -- --address <token-address>
 npm run token:deep -- --address <token-address>
+npm run gmgn -- --address <token-address>
+npm run binance -- --symbol SOLUSDT --address <token-address>
 npm run topics -- --token <token-address>
 ```
 
@@ -55,6 +62,7 @@ npm run topics -- --token <token-address>
 - Public API connectivity is degraded.
 - No GMGN API-key market metrics yet.
 - Partial GMGN response missing required hard-stop fields.
+- Binance public data missing when the user requested provider confirmation.
 - Top-10 holder share above 20%.
 - Creator/dev holding share above 10%.
 - Insider share above 10%.

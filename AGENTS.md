@@ -4,7 +4,8 @@
 
 Use Animeme public data to scout meme attention trends, analyze arbitrary token
 addresses, search narrative topics, review Attention Spotlight, inspect
-learning data, and publish advisory artifacts.
+learning data, query direct GMGN metrics, query Binance public market/Web3 data,
+and publish advisory artifacts.
 
 This repo is read-only with respect to markets and Animeme production systems.
 Do not trade, sign transactions, request private keys, or automate wallet
@@ -19,14 +20,18 @@ actions.
 4. Load `.agents/skills/animeme-data/SKILL.md`.
 5. For token due diligence, also load
    `.agents/skills/animeme-token-intelligence/SKILL.md`.
-6. Run `npm run doctor` to confirm Node, public API reachability, and GMGN API
-   key status.
+6. Run `npm run doctor` to confirm Node, Animeme reachability, GMGN API key
+   status, and Binance public API reachability.
 7. Run `npm run demo` for one full public ANIMEME context bundle.
 8. Run `npm run scan` for focused current attention.
 9. Use the most specific command for the task:
    - `npm run brief`
    - `npm run token -- --address <token-address>`
    - `npm run token:deep -- --address <token-address>`
+   - `npm run gmgn -- --address <token-address>`
+   - `npm run binance -- --symbol SOLUSDT`
+   - `npm run binance:spot -- --path /api/v3/ticker/price --symbol SOLUSDT`
+   - `npm run binance:web3 -- --mode search --keyword <query> --chain-ids CT_501`
    - `npm run topics -- --search <query>`
    - `npm run spotlight`
    - `npm run learning`
@@ -84,9 +89,13 @@ metrics when `GMGN_API_KEY` is configured. The key can come from the environment
 or `~/.config/gmgn/.env`; never print it, commit it, or write it into
 artifacts.
 
+Use Binance public Spot and Web3 endpoints for centralized market and token
+research. Do not use Binance account, order, signing, or private endpoints in
+this repo.
+
 The Animeme API client is in `src/animeme-client.ts`, the direct GMGN client is
-in `src/gmgn-client.ts`, and all analysis and artifact logic is in
-`src/cli.ts`.
+in `src/gmgn-client.ts`, the Binance public client is in
+`src/binance-client.ts`, and all analysis and artifact logic is in `src/cli.ts`.
 
 ## Command Map
 
@@ -95,6 +104,13 @@ in `src/gmgn-client.ts`, and all analysis and artifact logic is in
 - `npm run brief`: daily public context bundle across attention, spotlight, and learning.
 - `npm run context`: same full public bundle for agent context refreshes.
 - `npm run catalog`: print all supported public API surfaces.
+- `npm run gmgn -- --address <token-address>`: raw direct GMGN token metrics.
+- `npm run binance -- --symbol SOLUSDT`: Binance Spot market bundle, optionally
+  with `--address <token-address>` for Binance Web3 token context.
+- `npm run binance:spot -- --path /api/v3/ticker/price --symbol SOLUSDT`: raw
+  allowlisted Binance Spot public endpoint.
+- `npm run binance:web3 -- --mode search --keyword <query> --chain-ids CT_501`:
+  raw Binance Web3 public token search/meta/dynamic/kline data.
 - `npm run scan`: current hot topics across rising/latest/viral.
 - `npm run hot -- --limit 20`: ranked hot topics with a custom limit.
 - `npm run new -- --mode latest`: new/latest/rising/viral board view.
@@ -122,6 +138,7 @@ When the user asks for agent mode:
 - Prefer existing commands before inventing new fetch flows.
 - Do not call a token analysis complete unless direct GMGN API-key hard-stop
   fields are loaded.
+- Keep Animeme, GMGN, and Binance source status separate in summaries.
 - Write JSON and Markdown artifacts into `artifacts/`.
 - Keep every recommendation advisory and reversible.
 

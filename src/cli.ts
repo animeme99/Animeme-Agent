@@ -1,6 +1,15 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
+	BINANCE_SPOT_PUBLIC_PATHS,
+	checkBinancePublicAccess,
+	fetchBinanceSpotPublicPath,
+	fetchBinanceWeb3,
+	getBinanceMarketBundle,
+	type BinanceMarketBundle,
+	type BinanceWeb3Mode,
+} from "./binance-client.js";
+import {
 	createAnimemeClient,
 	DEFAULT_ANIMEME_API_BASE_URL,
 	findTopic,
@@ -34,6 +43,7 @@ type ArtifactPayload = {
 	contextGeneratedAt?: string;
 	createdAt: string;
 	kind: string;
+	symbol?: string;
 	topic?: AgentContextTopic | null;
 };
 
@@ -358,6 +368,108 @@ async function main() {
 			console.log(`\nArtifacts written: ${artifact.markdownPath}, ${artifact.jsonPath}`);
 			return;
 		}
+		case "gmgn": {
+			const address = readRequiredFlagOrPosition(args, "address", 0);
+			const metrics = await getDirectGmgnTokenMetrics([address]);
+			const markdown = renderGmgnMarkdown(address, metrics);
+			const artifact = await writeArtifacts("gmgn", {
+				address,
+				createdAt: new Date().toISOString(),
+				kind: "gmgn",
+				metrics,
+			});
+			await writeFile(artifact.markdownPath, markdown, "utf8");
+			console.log(markdown);
+			console.log(`\nArtifacts written: ${artifact.markdownPath}, ${artifact.jsonPath}`);
+			return;
+		}
+		case "binance": {
+			const symbol = readStringFlagOrPosition(args, "symbol", 0) || "SOLUSDT";
+			const bundle = await getBinanceMarketBundle({
+				address: readStringFlag(args, "address") || args.positionals[1],
+				chainId:
+					readStringFlag(args, "chain-id") ||
+					readStringFlag(args, "chainId") ||
+					args.positionals[2],
+				interval: readStringFlag(args, "interval"),
+				limit: readNumberFlag(args, "limit", 100),
+				platform: readStringFlag(args, "platform"),
+				symbol,
+			});
+			const markdown = renderBinanceBundleMarkdown(bundle);
+			const artifact = await writeArtifacts("binance", {
+				...bundle,
+				createdAt: new Date().toISOString(),
+				kind: "binance",
+			});
+			await writeFile(artifact.markdownPath, markdown, "utf8");
+			console.log(markdown);
+			console.log(`\nArtifacts written: ${artifact.markdownPath}, ${artifact.jsonPath}`);
+			return;
+		}
+		case "binance-spot": {
+			const apiPath = readRequiredFlagOrPosition(args, "path", 0);
+			const payload = await fetchBinanceSpotPublicPath(
+				apiPath,
+				buildBinanceSpotQueryParams(args),
+			);
+			const markdown = renderProviderFetchMarkdown(
+				"Binance Spot",
+				apiPath,
+				payload,
+			);
+			const artifact = await writeArtifacts("binance-spot", {
+				apiPath,
+				createdAt: new Date().toISOString(),
+				kind: "binance-spot",
+				payload,
+			});
+			await writeFile(artifact.markdownPath, markdown, "utf8");
+			console.log(JSON.stringify(payload, null, 2));
+			console.log(`\nArtifacts written: ${artifact.markdownPath}, ${artifact.jsonPath}`);
+			return;
+		}
+		case "binance-web3": {
+			const mode = readBinanceWeb3Mode(
+				readStringFlagOrPosition(args, "mode", 0),
+			);
+			const payload = await fetchBinanceWeb3({
+				chainId: readStringFlag(args, "chain-id") || readStringFlag(args, "chainId"),
+				chainIds:
+					readStringFlag(args, "chain-ids") ||
+					readStringFlag(args, "chainIds") ||
+					args.positionals[2],
+				contractAddress:
+					readStringFlag(args, "address") ||
+					readStringFlag(args, "contract-address") ||
+					readStringFlag(args, "contractAddress") ||
+					(mode === "search" ? null : args.positionals[1]),
+				from: readStringFlag(args, "from"),
+				interval: readStringFlag(args, "interval"),
+				keyword: readStringFlag(args, "keyword") || args.positionals[1],
+				limit: readStringFlag(args, "limit"),
+				mode,
+				orderBy: readStringFlag(args, "order-by") || readStringFlag(args, "orderBy"),
+				platform: readStringFlag(args, "platform"),
+				pm: readStringFlag(args, "pm"),
+				to: readStringFlag(args, "to"),
+			});
+			const markdown = renderProviderFetchMarkdown(
+				"Binance Web3",
+				mode,
+				payload,
+			);
+			const artifact = await writeArtifacts("binance-web3", {
+				createdAt: new Date().toISOString(),
+				kind: "binance-web3",
+				mode,
+				payload,
+			});
+			await writeFile(artifact.markdownPath, markdown, "utf8");
+			console.log(JSON.stringify(payload, null, 2));
+			console.log(`\nArtifacts written: ${artifact.markdownPath}, ${artifact.jsonPath}`);
+			return;
+		}
 		case "fetch": {
 			const apiPath = readRequiredFlagOrPosition(args, "path", 0);
 			const payload = await client.fetchPublicPath(apiPath);
@@ -428,6 +540,17 @@ function renderCatalogMarkdown() {
 		"## Raw Fetch",
 		"",
 		"Use `npm run fetch -- --path /api/learning/topics?pageSize=5` for any public Animeme API path.",
+		"",
+		"## Direct Provider Access",
+		"",
+		"- GMGN: `npm run gmgn -- --address <solana-token-address>` uses `GMGN_API_KEY` for raw token metrics.",
+		"- Binance bundle: `npm run binance -- --symbol SOLUSDT` loads Spot ticker, book ticker, and klines.",
+		"- Binance Spot raw: `npm run binance:spot -- --path /api/v3/ticker/24hr --symbol SOLUSDT`.",
+		"- Binance Web3 raw: `npm run binance:web3 -- --mode search --keyword <token>`.",
+		"",
+		"Binance Spot public allowlist:",
+		"",
+		...BINANCE_SPOT_PUBLIC_PATHS.map((entry) => `- ${entry}`),
 	].join("\n");
 }
 
@@ -505,6 +628,27 @@ async function runDoctor(client: AnimemeClient) {
 			status: result.status === "fulfilled" ? "ok" : "warn",
 		});
 	}
+
+	const binanceAccess = await checkBinancePublicAccess();
+	checks.push({
+		detail:
+			binanceAccess.spotTime.status === "fulfilled"
+				? `Public Spot API reachable. Keys available: ${describeKeys(binanceAccess.spotTime.value)}.`
+				: `Public Spot API failed: ${formatSettledReason(binanceAccess.spotTime.reason)}.`,
+		endpoint: "/api/v3/time",
+		label: "Binance Spot public API",
+		status: binanceAccess.spotTime.status === "fulfilled" ? "ok" : "warn",
+	});
+	checks.push({
+		detail:
+			binanceAccess.web3Search.status === "fulfilled"
+				? `Public Web3 token API reachable. Keys: ${describeKeys(binanceAccess.web3Search.value)}.`
+				: `Public Web3 token API failed: ${formatSettledReason(binanceAccess.web3Search.reason)}.`,
+		endpoint:
+			"/bapi/defi/v5/public/wallet-direct/buw/wallet/market/token/search/ai",
+		label: "Binance Web3 public API",
+		status: binanceAccess.web3Search.status === "fulfilled" ? "ok" : "warn",
+	});
 
 	return {
 		baseUrl,
@@ -1200,6 +1344,83 @@ function renderFetchMarkdown(apiPath: string, payload: unknown) {
 	].join("\n");
 }
 
+function renderGmgnMarkdown(address: string, metrics: TokenMetricsResponse) {
+	const metric = findMetricForAddress(metrics, address);
+	return [
+		`# GMGN Token Metrics: ${address}`,
+		"",
+		`Generated: ${new Date().toISOString()}`,
+		`Source: ${metrics.source || "gmgn-openapi"}`,
+		"",
+		"## Status",
+		"",
+		metric
+			? `- Loaded direct GMGN API-key metrics. Keys: ${describeKeys(metric)}.`
+			: "- No GMGN metric item returned for this address.",
+		...(metrics.pendingAddresses?.length
+			? [`- Pending: ${metrics.pendingAddresses.join(", ")}`]
+			: []),
+		...(Object.keys(metrics.errors || {}).length
+			? [
+					"- Errors:",
+					...Object.entries(metrics.errors || {}).map(
+						([key, value]) => `  - ${key}: ${value}`,
+					),
+				]
+			: []),
+		"",
+		"## Preview",
+		"",
+		shortJson(metric || metrics, 1_500),
+	].join("\n");
+}
+
+function renderBinanceBundleMarkdown(bundle: BinanceMarketBundle) {
+	const price = getNestedField(bundle.spot.price, ["price"]);
+	const ticker = isRecord(bundle.spot.ticker24h) ? bundle.spot.ticker24h : null;
+	const web3Keys = bundle.web3 ? describeKeys(bundle.web3) : "not requested";
+	return [
+		`# Binance Market Bundle: ${bundle.symbol}`,
+		"",
+		`Generated: ${bundle.generatedAt}`,
+		`Source: ${bundle.source}`,
+		"",
+		"## Spot",
+		"",
+		`- Price: ${price ? String(price) : "unavailable"}`,
+		`- 24h change: ${getNestedField(ticker, ["priceChangePercent"]) ?? "unavailable"}`,
+		`- 24h volume: ${getNestedField(ticker, ["volume"]) ?? "unavailable"}`,
+		`- Quote volume: ${getNestedField(ticker, ["quoteVolume"]) ?? "unavailable"}`,
+		`- Spot payload keys: ${describeKeys(bundle.spot)}`,
+		"",
+		"## Web3",
+		"",
+		`- Web3 payload keys: ${web3Keys}`,
+		"",
+		"## Next",
+		"",
+		"- Use `npm run binance:spot -- --path /api/v3/ticker/24hr --symbol <SYMBOL>` for a raw Spot endpoint.",
+		"- Use `npm run binance:web3 -- --mode dynamic --address <token> --chain-id CT_501` for raw Web3 token data.",
+	].join("\n");
+}
+
+function renderProviderFetchMarkdown(
+	provider: string,
+	descriptor: string,
+	payload: unknown,
+) {
+	return [
+		`# ${provider} Fetch: ${descriptor}`,
+		"",
+		`Generated: ${new Date().toISOString()}`,
+		`Top-level keys: ${describeKeys(payload)}`,
+		"",
+		"## Preview",
+		"",
+		shortJson(payload, 1_500),
+	].join("\n");
+}
+
 async function writeArtifacts(
 	kind: string,
 	payload: ArtifactPayload & Record<string, unknown>,
@@ -1210,7 +1431,9 @@ async function writeArtifacts(
 		? slugify(payload.topic.name)
 		: payload.address
 			? slugify(payload.address)
-			: "context";
+			: payload.symbol
+				? slugify(payload.symbol)
+				: "context";
 	const base = path.join("artifacts", `${timestamp}-${kind}-${slug}`);
 	const jsonPath = `${base}.json`;
 	const markdownPath = `${base}.md`;
@@ -1258,6 +1481,36 @@ function parseArgs(args: string[]): ParsedArgs {
 function readStringFlag(args: ParsedArgs, name: string) {
 	const value = args.flags[name];
 	return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function flagsToQueryParams(args: ParsedArgs, excludedNames: string[]) {
+	const excluded = new Set(excludedNames);
+	return Object.fromEntries(
+		Object.entries(args.flags)
+			.filter(([key]) => !excluded.has(key))
+			.map(([key, value]) => [key, value === true ? "true" : value]),
+	);
+}
+
+function buildBinanceSpotQueryParams(args: ParsedArgs) {
+	const params = flagsToQueryParams(args, ["path"]);
+	const positionalSymbol = args.positionals[1];
+	if (!params.symbol && positionalSymbol) {
+		params.symbol = positionalSymbol;
+	}
+	return params;
+}
+
+function readBinanceWeb3Mode(value: string | null): BinanceWeb3Mode {
+	if (
+		value === "dynamic" ||
+		value === "kline" ||
+		value === "meta" ||
+		value === "search"
+	) {
+		return value;
+	}
+	return "search";
 }
 
 function readStringFlagOrPosition(
@@ -1365,18 +1618,16 @@ function describeItemsOrMissing(value: unknown) {
 	return items.length > 0 ? `${items.length} items` : `keys: ${describeKeys(value)}`;
 }
 
+function formatSettledReason(reason: unknown) {
+	return reason instanceof Error ? reason.message : String(reason);
+}
+
 function collectSettledWarnings(
 	results: Record<string, PromiseSettledResult<unknown>>,
 ) {
 	return Object.entries(results).flatMap(([label, result]) =>
 		result.status === "rejected"
-			? [
-					`${label} request failed: ${
-						result.reason instanceof Error
-							? result.reason.message
-							: String(result.reason)
-					}`,
-				]
+			? [`${label} request failed: ${formatSettledReason(result.reason)}`]
 			: [],
 	);
 }
@@ -1495,6 +1746,17 @@ function getField(record: Record<string, unknown>, keys: readonly string[]) {
 	return null;
 }
 
+function getNestedField(record: unknown, keys: readonly string[]) {
+	if (!isRecord(record)) {
+		return null;
+	}
+	return getField(record, keys);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
 function describeKeys(value: unknown) {
 	if (!value || typeof value !== "object" || Array.isArray(value)) {
 		return "none";
@@ -1576,6 +1838,10 @@ Commands:
   npm run brief
   npm run context
   npm run catalog
+  npm run gmgn -- --address <token-address>
+  npm run binance -- --symbol SOLUSDT
+  npm run binance:spot -- --path /api/v3/ticker/24hr --symbol SOLUSDT
+  npm run binance:web3 -- --mode search --keyword <query>
   npm run scan
   npm run hot -- --limit 20
   npm run new -- --mode latest

@@ -7,7 +7,8 @@ Charts are late. Memes move first. ANIMEME finds the meme behind the move.
 This repository makes ANIMEME public intelligence portable. It gives a
 user-controlled agent read-only access to public attention boards, spotlight
 signals, learning summaries, searchable narrative memory, token context, and
-timestamped research artifacts.
+timestamped research artifacts. It also includes direct read-only access paths
+for GMGN token metrics and Binance public market/Web3 data.
 
 ```bash
 npx skills add 0xchalker/Animeme-Agent
@@ -63,6 +64,8 @@ It can:
 - inspect topic detail and public source context
 - analyze a token address against live attention, direct GMGN API-key metrics,
   and Animeme market fallback data
+- fetch direct GMGN token metrics with `GMGN_API_KEY`
+- fetch Binance Spot public market data and Binance Web3 public token data
 - write JSON and Markdown artifacts under `artifacts/`
 - expose reusable skills under `.agents/skills/`
 
@@ -73,6 +76,7 @@ It does not:
 - request wallet keys
 - create tokens
 - mutate ANIMEME production data
+- call Binance account, order, or signed trading endpoints
 - turn a score into financial advice
 
 ## Install As A Skill
@@ -130,6 +134,22 @@ GMGN_API_KEY=<your-gmgn-openapi-key>
 writes the key. If GMGN metrics are missing, `token:deep` marks the analysis
 incomplete, lowers confidence, and does not clear holder, insider, or bundler
 hard-stop checks.
+
+## Provider Access
+
+The CLI gives agents three read-only data lanes:
+
+```bash
+npm run fetch -- --path /api/learning/topics?pageSize=5
+npm run gmgn -- --address <solana-token-address>
+npm run binance -- --symbol SOLUSDT
+npm run binance:spot -- --path /api/v3/ticker/price --symbol SOLUSDT
+npm run binance:web3 -- --mode search --keyword SOL --chain-ids CT_501
+```
+
+Animeme access is limited to public `/api/*` paths. GMGN access requires
+`GMGN_API_KEY`. Binance commands use public Spot and Web3 market endpoints and
+do not require Binance account credentials.
 
 ## First Prompt After Install
 
@@ -228,6 +248,10 @@ Agent use:
 | `npm run brief` | Daily public context brief for operator-style use. | Full public context artifact |
 | `npm run context` | Refresh full public context for an agent session. | Full public context artifact |
 | `npm run catalog` | Print the public data catalog and endpoint use cases. | JSON + Markdown |
+| `npm run gmgn -- --address <token>` | Fetch direct GMGN API-key token metrics. | GMGN artifact |
+| `npm run binance -- --symbol SOLUSDT` | Load Binance Spot market bundle, optionally with Web3 token data. | Binance bundle artifact |
+| `npm run binance:spot -- --path /api/v3/ticker/price --symbol SOLUSDT` | Fetch an allowlisted Binance Spot public endpoint. | Raw Binance Spot artifact |
+| `npm run binance:web3 -- --mode search --keyword SOL --chain-ids CT_501` | Fetch Binance Web3 public token search/meta/dynamic/kline data. | Raw Binance Web3 artifact |
 | `npm run scan` | Scan current attention boards. | Hot topic artifact |
 | `npm run hot -- --limit 20` | Rank the strongest current topics. | Hot topic artifact |
 | `npm run new -- --mode latest` | Inspect new/latest topic flow. | Mode artifact |
@@ -250,6 +274,9 @@ Agent use:
 | Spotlight | `/api/spotlight`, `/api/spotlight-topic-signals` | Why this, why now, and what happened since first trigger? | `demo`, `brief`, `spotlight`, `topic` |
 | Learning | `/api/learning/*` | What patterns worked before? Which topics repeated? What did ANIMEME learn? | `demo`, `brief`, `learning`, `topics`, `topic` |
 | Market Metrics | GMGN OpenAPI via `GMGN_API_KEY`, plus `/api/market/token-metrics` fallback | Is this token crowded, manipulated, or worth deeper research? | `token`, `token:deep` |
+| GMGN Raw | `https://openapi.gmgn.ai/v1/token/info` | What does direct GMGN report for this Solana token? | `gmgn`, `token`, `token:deep` |
+| Binance Spot | public `https://api.binance.com/api/v3/*` allowlist | What are centralized market price, ticker, depth, trades, and kline data? | `binance`, `binance:spot` |
+| Binance Web3 | public Binance Web3 token endpoints | What are token search, metadata, dynamic market, holder, and kline fields? | `binance`, `binance:web3` |
 | Raw API | public `/api/*` allowlist | Let advanced agents inspect new public endpoints without code changes. | `fetch` |
 
 ## Intelligence Loop
@@ -359,6 +386,15 @@ Run npm run fetch -- --path /api/<path>.
 Summarize only the fields that matter for the user's question.
 ```
 
+### Provider Data Check
+
+```text
+Run npm run doctor.
+Run npm run gmgn -- --address <token-address>.
+Run npm run binance -- --symbol SOLUSDT --address <token-address>.
+Summarize Animeme, GMGN, and Binance data separately.
+```
+
 ## Artifact Contract
 
 Every command writes generated artifacts:
@@ -397,6 +433,7 @@ The repo ignores generated artifacts by default, except `artifacts/.gitkeep`.
 |   +-- README.md
 +-- src/
 |   +-- animeme-client.ts
+|   +-- binance-client.ts
 |   +-- cli.ts
 |   +-- gmgn-client.ts
 |   +-- token-intelligence.ts
@@ -429,6 +466,38 @@ Direct GMGN OpenAPI is used only by the local CLI when `GMGN_API_KEY` is
 configured. It is not an Animeme public `/api/*` route and the key must never be
 committed, printed, or copied into artifacts.
 
+## Provider API Contract
+
+GMGN:
+
+- `GET https://openapi.gmgn.ai/v1/token/info?chain=sol&address=<address>`
+- Header: `X-APIKEY: <GMGN_API_KEY>`
+- Commands: `gmgn`, `token`, `token:deep`
+
+Binance Spot public allowlist:
+
+- `/api/v3/exchangeInfo`
+- `/api/v3/ping`
+- `/api/v3/time`
+- `/api/v3/avgPrice`
+- `/api/v3/depth`
+- `/api/v3/klines`
+- `/api/v3/ticker`
+- `/api/v3/ticker/24hr`
+- `/api/v3/ticker/bookTicker`
+- `/api/v3/ticker/price`
+- `/api/v3/ticker/tradingDay`
+- `/api/v3/trades`
+- `/api/v3/aggTrades`
+- `/api/v3/uiKlines`
+
+Binance Web3 public modes:
+
+- `search`: keyword token search across `56`, `8453`, and `CT_501`
+- `meta`: token metadata by `chainId` and contract address
+- `dynamic`: token market, holder, liquidity, and volume fields
+- `kline`: token candle data by platform and address
+
 ## Reliability Model
 
 The CLI is intentionally conservative:
@@ -436,6 +505,7 @@ The CLI is intentionally conservative:
 - non-JSON responses become explicit warnings
 - missing market metrics do not become bullish
 - missing GMGN API-key metrics make `token:deep` incomplete
+- provider fetches write missing-data warnings instead of inventing fields
 - missing attention context lowers confidence
 - hard stops override attractive narratives
 - every report stays advisory
@@ -445,6 +515,8 @@ The CLI is intentionally conservative:
 Allowed:
 
 - read public ANIMEME data
+- read direct GMGN token metrics with a user-provided API key
+- read Binance public Spot/Web3 market data
 - analyze and score
 - write generated artifacts
 - summarize uncertainty and missing data
@@ -456,6 +528,7 @@ Blocked:
 - request private keys
 - store credentials, cookies, exported sessions, or wallet material
 - mutate production systems
+- use Binance account/order endpoints
 - claim a token is guaranteed safe
 
 All output is research, not financial advice.
@@ -473,6 +546,7 @@ npm run typecheck
 npm run doctor
 npm run demo
 npm run token:deep -- --address <token-address>
+npm run binance -- --symbol SOLUSDT
 ```
 
 When extending the kit:
@@ -501,8 +575,8 @@ No wallet credentials are needed. Complete token analysis can use a read-only
 
 ### Can agents fetch arbitrary websites?
 
-No command in this repo needs arbitrary web access. The client accepts public
-ANIMEME `/api/*` paths only.
+No. Raw fetch is constrained to public ANIMEME `/api/*`, direct GMGN token
+metrics, and allowlisted Binance public Spot/Web3 endpoints.
 
 ### What happens when data is missing?
 

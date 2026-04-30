@@ -7,13 +7,15 @@ description: Perform advanced token due diligence with Animeme public attention,
 
 Use this skill for token-level analysis. Keep the output branded as Animeme
 Intelligence. For source status, explicitly distinguish Animeme trending data
-from GMGN API-key token metrics.
+from GMGN API-key token metrics and optional Binance public market/Web3 data.
 
 ## Scope
 
 - Analyze any token address with public Animeme data.
 - Combine live Now Attention matches, Learning archive matches, Spotlight
   context, direct GMGN API-key metrics, and Animeme market fallback metrics.
+- Use Binance public Spot/Web3 data only as supporting market context when the
+  user asks for provider-level confirmation.
 - Produce a clear score, verdict, strengths, warnings, and hard stops.
 - Keep all conclusions advisory. Never trade, sign, request private keys, or
   tell the user a token is guaranteed safe.
@@ -35,6 +37,8 @@ npm install
 npm run doctor
 npm run token -- --address <token-address>
 npm run token:deep -- --address <token-address>
+npm run gmgn -- --address <token-address>
+npm run binance -- --symbol SOLUSDT --address <token-address>
 ```
 
 Use `token` for a quick report. Use `token:deep` for a fuller due-diligence
@@ -45,6 +49,7 @@ If npm strips flags in the current shell, use
 For complete token analysis, configure the GMGN key with either
 `GMGN_API_KEY` or `~/.config/gmgn/.env`. `npm run doctor` reports only the key
 status, never the key value.
+Binance public data does not require Binance account credentials.
 
 ## First Response Guide
 
@@ -63,6 +68,7 @@ Then summarize:
 - Animeme Intelligence Score and verdict.
 - Whether public API connectivity is ready or degraded.
 - Whether GMGN API-key metrics are loaded, missing, partial, or failed.
+- Whether optional Binance data was loaded or skipped.
 - Live attention matches.
 - Learning matches.
 - GMGN/Animeme market metrics.
@@ -91,7 +97,11 @@ Then summarize:
 3. Check learning context:
    - Does the token or topic match prior Animeme learning records?
    - Did similar patterns historically become winners or fail fast?
-4. Produce one verdict:
+4. Use Binance only for supporting market context:
+   - Spot symbol ticker, price, book ticker, and klines.
+   - Web3 token search, metadata, dynamic fields, and token klines.
+   - Never let Binance price data override missing GMGN hard-stop fields.
+5. Produce one verdict:
    - `researchable`: enough clean signals to keep researching
    - `watch`: mixed or incomplete signals
    - `high-risk`: weak attention and poor/incomplete metrics
@@ -116,6 +126,7 @@ Then summarize:
 - Do not dump raw JSON unless the user asks.
 - Do not reveal secret values. It is acceptable to name `GMGN API-key metrics`
   as a data source; never print the key itself.
+- Do not request Binance account keys. This repo uses public Binance data only.
 - Refer to Animeme trend data as `Now Attention`, `Attention Spotlight`, or
   `Narrative Learning`.
 - Explicitly say when data is missing.

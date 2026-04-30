@@ -7,7 +7,8 @@ Everything is read-only and advisory.
 
 - `npm run doctor`: checks Node version and public ANIMEME API reachability.
   It also reports whether `GMGN_API_KEY` is configured for complete token
-  analysis without printing the key.
+  analysis and whether Binance public APIs are reachable without printing any
+  secret.
 - `npm run demo`: loads the easiest first-run public context bundle.
 - `npm run brief`: daily context bundle across Now Attention, Spotlight, and
   Narrative Learning.
@@ -58,13 +59,58 @@ For `token:deep`, do not call the analysis complete unless GMGN returns the
 required hard-stop fields: top-10 holder share, creator/dev holding share,
 insider pressure, and bundled activity.
 
+## Direct GMGN
+
+- `GET https://openapi.gmgn.ai/v1/token/info?chain=sol&address=<address>`
+- Requires `GMGN_API_KEY` or `~/.config/gmgn/.env`.
+- Use for direct token metrics, holder concentration, smart/KOL holder fields,
+  insider pressure, bundled activity, and raw provider diagnostics.
+- CLI: `npm run gmgn -- --address <token-address>`
+- Used by: `npm run token`, `npm run token:deep`
+
+## Binance Spot Public
+
+- `GET https://api.binance.com/api/v3/time`
+- `GET https://api.binance.com/api/v3/exchangeInfo`
+- `GET https://api.binance.com/api/v3/ticker/price`
+- `GET https://api.binance.com/api/v3/ticker/24hr`
+- `GET https://api.binance.com/api/v3/ticker/bookTicker`
+- `GET https://api.binance.com/api/v3/ticker`
+- `GET https://api.binance.com/api/v3/ticker/tradingDay`
+- `GET https://api.binance.com/api/v3/depth`
+- `GET https://api.binance.com/api/v3/trades`
+- `GET https://api.binance.com/api/v3/aggTrades`
+- `GET https://api.binance.com/api/v3/klines`
+- `GET https://api.binance.com/api/v3/uiKlines`
+- `GET https://api.binance.com/api/v3/avgPrice`
+- `GET https://api.binance.com/api/v3/ping`
+- Use for centralized market reference data, ticker, book, trade, and candle
+  context.
+- CLI: `npm run binance -- --symbol SOLUSDT`
+- Raw CLI: `npm run binance:spot -- --path /api/v3/ticker/price --symbol SOLUSDT`
+
+## Binance Web3 Public
+
+- Token search:
+  `/bapi/defi/v5/public/wallet-direct/buw/wallet/market/token/search/ai`
+- Token metadata:
+  `/bapi/defi/v1/public/wallet-direct/buw/wallet/dex/market/token/meta/info/ai`
+- Token dynamic market data:
+  `/bapi/defi/v4/public/wallet-direct/buw/wallet/market/token/dynamic/info/ai`
+- Token kline:
+  `https://dquery.sintral.io/u-kline/v1/k-line/candles`
+- Use for token search, metadata, socials, dynamic market fields, holders,
+  liquidity, volume, and candles across BSC, Base, and Solana.
+- CLI: `npm run binance:web3 -- --mode search --keyword SOL --chain-ids CT_501`
+- Modes: `search`, `meta`, `dynamic`, `kline`
+
 ## Token Intelligence Skill
 
 - Skill: `.agents/skills/animeme-token-intelligence/SKILL.md`
 - Use for token safety, holder-quality, crowding, manipulation-risk, and
   conviction reviews.
-- Output is branded as Animeme Intelligence and should not expose backend
-  adapter names.
+- Output is branded as Animeme Intelligence. It may name Animeme, GMGN, and
+  Binance as data sources, but must never expose secret values.
 
 ## Default Agent Demo
 
@@ -84,6 +130,8 @@ For token users, ask for a token address and run:
 ```bash
 npm run doctor
 npm run token:deep -- --address <token-address>
+npm run gmgn -- --address <token-address>
+npm run binance -- --symbol SOLUSDT --address <token-address>
 ```
 
 ## Raw Public Fetch
