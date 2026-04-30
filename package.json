@@ -1,7 +1,7 @@
 {
 	"name": "animeme-agent",
 	"version": "0.1.0",
-	"description": "Cloneable read-only agent kit for scouting Animeme public attention data.",
+	"description": "Read-only ANIMEME Agent Skill for public pre-chart meme intelligence.",
 	"type": "module",
 	"private": false,
 	"engines": {
