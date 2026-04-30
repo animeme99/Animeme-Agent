@@ -8,7 +8,7 @@ read-only and advisory.
 When a user installs Animeme Agent with:
 
 ```bash
-npx skills add 0xchalker/Animeme-Agent
+npx skills add animeme99/Animeme-Agent
 ```
 
 and then asks what to do next, show the capability menu from `AGENTS.md`, offer
@@ -21,7 +21,7 @@ narrative explanations, Spotlight previews, and provider data checks while
 keeping Animeme, GMGN, and Binance source status separate.
 
 If the installed skill folder only contains `SKILL.md`, clone
-`https://github.com/0xchalker/Animeme-Agent` before running CLI commands. For
+`https://github.com/animeme99/Animeme-Agent` before running CLI commands. For
 token analysis, `npm run doctor` must check GMGN API key status, and
 `token:deep` is incomplete unless direct GMGN API-key metrics plus Animeme
 trending data are loaded.

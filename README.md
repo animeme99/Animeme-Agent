@@ -11,7 +11,7 @@ timestamped research artifacts. It also includes direct read-only access paths
 for GMGN token metrics and Binance public market/Web3 data.
 
 ```bash
-npx skills add 0xchalker/Animeme-Agent
+npx skills add animeme99/Animeme-Agent
 ```
 
 After install, the easiest agent prompt is:
@@ -35,7 +35,7 @@ The Agent Skill is a support layer. The core product remains
 ## Public Links
 
 - Product: [animeme.app](https://animeme.app)
-- GitHub: [0xchalker/Animeme-Agent](https://github.com/0xchalker/Animeme-Agent)
+- GitHub: [animeme99/Animeme-Agent](https://github.com/animeme99/Animeme-Agent)
 - X: [@Animemeapp](https://x.com/Animemeapp)
 - Telegram: [Animeme_AI](https://t.me/Animeme_AI)
 
@@ -92,7 +92,7 @@ It does not:
 Use this when your agent supports skill installation:
 
 ```bash
-npx skills add 0xchalker/Animeme-Agent
+npx skills add animeme99/Animeme-Agent
 ```
 
 The repo exposes two skills:
@@ -110,7 +110,7 @@ crowding, holder quality, manipulation risk, and conviction review.
 ## Clone And Run
 
 ```bash
-git clone https://github.com/0xchalker/Animeme-Agent.git
+git clone https://github.com/animeme99/Animeme-Agent.git
 cd Animeme-Agent
 npm install
 npm run typecheck
@@ -212,7 +212,7 @@ ANIMEME Agent Skill can help with:
 
 Default demo:
 - Run npm run doctor.
-- If this folder only has SKILL.md, clone https://github.com/0xchalker/Animeme-Agent first.
+- If this folder only has SKILL.md, clone https://github.com/animeme99/Animeme-Agent first.
 - Run npm run demo.
 - Pick the strongest Attention Read from the demo or scan.
 - Run npm run thesis -- --topic <topic-id>.
@@ -634,8 +634,8 @@ No. The score is an agent research heuristic for deciding what to inspect next.
 ## Short Version
 
 ```bash
-npx skills add 0xchalker/Animeme-Agent
-git clone https://github.com/0xchalker/Animeme-Agent.git
+npx skills add animeme99/Animeme-Agent
+git clone https://github.com/animeme99/Animeme-Agent.git
 cd Animeme-Agent
 npm install
 npm run doctor

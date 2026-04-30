@@ -26,7 +26,7 @@ If the current working folder only contains this `SKILL.md` and no
 `package.json`, clone the executable repo first:
 
 ```bash
-git clone https://github.com/0xchalker/Animeme-Agent.git
+git clone https://github.com/animeme99/Animeme-Agent.git
 cd Animeme-Agent
 npm install
 ```

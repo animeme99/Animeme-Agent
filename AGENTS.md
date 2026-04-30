@@ -14,7 +14,7 @@ actions.
 ## Fast Path
 
 1. If the current folder only has `SKILL.md` and no `package.json`, clone
-   `https://github.com/0xchalker/Animeme-Agent` and work from that repo root.
+   `https://github.com/animeme99/Animeme-Agent` and work from that repo root.
 2. Run `npm install` if dependencies are missing.
 3. Run `npm run typecheck`.
 4. Load `.agents/skills/animeme-data/SKILL.md`.
