@@ -88,6 +88,7 @@ what has attention -> why now -> what confirms it -> what weakens it -> what to 
 | --- | --- |
 | [Quick Start](#quick-start) | Install, clone, validate, and run the first demo. |
 | [Core Concept](#core-concept) | Understand the ANIMEME intelligence loop. |
+| [Graph Gallery](#graph-gallery) | See the routing, lifecycle, pipeline, verdict, and artifact graphs. |
 | [Public Surfaces](#public-surfaces) | Learn what Now Attention, Spotlight, Learning, Explore, and Token Intelligence do. |
 | [Command Center](#command-center) | Pick the right command for the job. |
 | [Demo Playbooks](#demo-playbooks) | Copy professional demo prompts and workflows. |
@@ -202,6 +203,129 @@ sequenceDiagram
     I-->>C: Attention, Spotlight, Learning, token context
     C-->>R: Write JSON and Markdown
     A-->>U: Explain signal, risk, and next step
+```
+
+---
+
+## Graph Gallery
+
+### Prompt Routing Graph
+
+```mermaid
+flowchart TD
+    P["User Prompt"] --> Q{"What is the user asking?"}
+    Q -->|"current market read"| A["Now Attention"]
+    Q -->|"specific narrative"| E["Explore Narrative"]
+    Q -->|"historical pattern"| L["Narrative Learning"]
+    Q -->|"spotlight status"| S["Attention Spotlight"]
+    Q -->|"token address"| T["Token Intelligence"]
+    Q -->|"next action"| W["Watch Plan"]
+    A --> J["Agent Judgment"]
+    E --> J
+    L --> J
+    S --> J
+    T --> J
+    W --> J
+    J --> O["Answer + Next Command"]
+```
+
+### Attention Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Detected
+    Detected --> Legible: catalyst is clear
+    Detected --> Ignored: weak or vague
+    Legible --> Spotlight: signal persists
+    Spotlight --> Learning: pattern becomes useful
+    Spotlight --> Watch: evidence is incomplete
+    Watch --> Spotlight: attention strengthens
+    Watch --> Ignored: signal fades
+    Learning --> Artifact: agent writes thesis or risk
+    Artifact --> [*]
+    Ignored --> [*]
+```
+
+### ANIMEME Research Pipeline
+
+```mermaid
+flowchart LR
+    A["Live Attention"] --> B["Narrative Decode"]
+    B --> C["Catalyst Read"]
+    C --> D["Spotlight Context"]
+    D --> E["Learning Memory"]
+    E --> F["Token Context"]
+    F --> G["Warnings + Hard Stops"]
+    G --> H["Verdict"]
+    H --> I["Artifact"]
+```
+
+### Token Verdict Decision Graph
+
+```mermaid
+flowchart TD
+    T["Token Address"] --> A{"Live ANIMEME match?"}
+    A -->|"yes"| B["Read narrative context"]
+    A -->|"no"| C["Lower confidence"]
+    B --> D{"Learning match?"}
+    C --> D
+    D -->|"yes"| E["Compare prior patterns"]
+    D -->|"no"| F["Mark historical context missing"]
+    E --> G{"Hard stop present?"}
+    F --> G
+    G -->|"yes"| AV["avoid"]
+    G -->|"no"| H{"Required context complete?"}
+    H -->|"no"| WA["watch"]
+    H -->|"yes"| R{"Signals coherent?"}
+    R -->|"yes"| RE["researchable"]
+    R -->|"mixed"| WA
+    R -->|"weak"| HR["high-risk"]
+```
+
+### Answer Weighting
+
+```mermaid
+pie title ANIMEME Agent Answer Weighting
+    "Live attention" : 30
+    "Catalyst clarity" : 20
+    "Learning memory" : 20
+    "Token context" : 15
+    "Risk and missing data" : 15
+```
+
+### Topic Intelligence Map
+
+```mermaid
+flowchart TB
+    Topic["Topic"]
+    Topic --> Story["Story people can retell"]
+    Topic --> Catalyst["Catalyst"]
+    Topic --> Crowd["Crowd state"]
+    Topic --> Token["Token surface"]
+    Topic --> Memory["Learning memory"]
+    Story --> Thesis["Thesis"]
+    Catalyst --> Thesis
+    Crowd --> Risk["Risk"]
+    Token --> Risk
+    Memory --> Watch["Watch plan"]
+    Risk --> Watch
+    Thesis --> Artifact["Research artifact"]
+    Watch --> Artifact
+```
+
+### Demo Flow Graph
+
+```mermaid
+flowchart LR
+    Install["Install skill"] --> Doctor["doctor"]
+    Doctor --> Demo["demo"]
+    Demo --> Pick["pick strongest topic"]
+    Pick --> Thesis["thesis"]
+    Pick --> Risk["risk"]
+    Pick --> Watch["watch"]
+    Thesis --> Summary["agent summary"]
+    Risk --> Summary
+    Watch --> Summary
 ```
 
 ---
@@ -591,9 +715,9 @@ All output is research, not financial advice.
 This public repository documents ANIMEME as the only public intelligence
 surface.
 
-Public docs must not expose, name, map, or describe upstream provider
-endpoints. Agents should treat every workflow as ANIMEME intelligence unless a
-local operator has separately configured private enrichment outside the public
+Public docs must not expose, name, map, or describe non-ANIMEME endpoints.
+Agents should treat every workflow as ANIMEME intelligence unless a local
+operator has separately configured private enrichment outside the public
 documentation surface.
 
 Allowed public language:
@@ -608,9 +732,9 @@ Allowed public language:
 
 Avoid public documentation that exposes:
 
-- upstream provider endpoint URLs
-- upstream provider route paths
-- upstream provider credential names
+- non-ANIMEME endpoint URLs
+- non-ANIMEME route paths
+- non-ANIMEME credential names
 - adapter internals
 - private infrastructure topology
 - account, wallet, signing, or trading instructions
@@ -637,7 +761,7 @@ When extending the kit:
 - add new workflows through the CLI before documenting them
 - keep generated files under `artifacts/`
 - document user-facing behavior in `README.md`, `AGENTS.md`, and `docs/`
-- do not expose upstream provider endpoint details in public docs
+- do not expose non-ANIMEME endpoint details in public docs
 - keep every workflow read-only unless the product explicitly changes scope
 
 ---
