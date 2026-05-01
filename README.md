@@ -88,7 +88,7 @@ what has attention -> why now -> what confirms it -> what weakens it -> what to 
 | --- | --- |
 | [Quick Start](#quick-start) | Install, clone, validate, and run the first demo. |
 | [Core Concept](#core-concept) | Understand the ANIMEME intelligence loop. |
-| [Graph Gallery](#graph-gallery) | See the routing, lifecycle, pipeline, verdict, and artifact graphs. |
+| [Attention Analysis Graphs](#attention-analysis-graphs) | See how ANIMEME reads attention, crowd state, heat, decay, and learning loops. |
 | [Public Surfaces](#public-surfaces) | Learn what Now Attention, Spotlight, Learning, Explore, and Token Intelligence do. |
 | [Command Center](#command-center) | Pick the right command for the job. |
 | [Demo Playbooks](#demo-playbooks) | Copy professional demo prompts and workflows. |
@@ -207,125 +207,126 @@ sequenceDiagram
 
 ---
 
-## Graph Gallery
+## Attention Analysis Graphs
 
-### Prompt Routing Graph
+These diagrams focus on attention analysis itself: how ANIMEME detects a
+story, decides whether attention is real, classifies crowd state, and feeds the
+learning archive.
+
+### Attention Formation Stack
 
 ```mermaid
-flowchart TD
-    P["User Prompt"] --> Q{"What is the user asking?"}
-    Q -->|"current market read"| A["Now Attention"]
-    Q -->|"specific narrative"| E["Explore Narrative"]
-    Q -->|"historical pattern"| L["Narrative Learning"]
-    Q -->|"spotlight status"| S["Attention Spotlight"]
-    Q -->|"token address"| T["Token Intelligence"]
-    Q -->|"next action"| W["Watch Plan"]
-    A --> J["Agent Judgment"]
-    E --> J
-    L --> J
-    S --> J
-    T --> J
-    W --> J
-    J --> O["Answer + Next Command"]
+flowchart TB
+    A["Attention object appears"] --> B["Readable meme or catalyst"]
+    B --> C["Topic is easy to retell"]
+    C --> D["Crowd starts repeating the frame"]
+    D --> E["Token surface becomes visible"]
+    E --> F["ANIMEME compares historical memory"]
+    F --> G["Attention Read"]
 ```
 
-### Attention Lifecycle
+### Attention Signal Decomposition
+
+```mermaid
+pie title What ANIMEME Weighs In An Attention Read
+    "Catalyst clarity" : 24
+    "Attention velocity" : 20
+    "Board persistence" : 18
+    "Narrative retellability" : 16
+    "Token surface coherence" : 12
+    "Learning memory" : 10
+```
+
+### Board Movement Analysis
+
+```mermaid
+flowchart LR
+    Latest["Latest board"] --> R{"Does attention persist?"}
+    R -->|"no"| Noise["noise or watch only"]
+    R -->|"yes"| Rising["Rising board"]
+    Rising --> V{"Does the story keep spreading?"}
+    V -->|"no"| Watch["watch for decay"]
+    V -->|"yes"| Viral["Viral board"]
+    Viral --> S{"Is catalyst still legible?"}
+    S -->|"yes"| Spotlight["Spotlight candidate"]
+    S -->|"no"| Crowded["crowded or late"]
+```
+
+### Crowd-State Classifier
 
 ```mermaid
 stateDiagram-v2
     [*] --> Detected
-    Detected --> Legible: catalyst is clear
-    Detected --> Ignored: weak or vague
-    Legible --> Spotlight: signal persists
-    Spotlight --> Learning: pattern becomes useful
-    Spotlight --> Watch: evidence is incomplete
-    Watch --> Spotlight: attention strengthens
-    Watch --> Ignored: signal fades
-    Learning --> Artifact: agent writes thesis or risk
-    Artifact --> [*]
-    Ignored --> [*]
+    Detected --> Early: readable but not crowded
+    Early --> Rising: velocity improves
+    Rising --> RealHeat: persists with coherent story
+    Rising --> Crowded: attention outruns proof
+    Crowded --> Weak: follow-through fades
+    Early --> Weak: catalyst fails
+    Weak --> [*]
+    RealHeat --> Learning: pattern becomes useful
+    Learning --> [*]
 ```
 
-### ANIMEME Research Pipeline
-
-```mermaid
-flowchart LR
-    A["Live Attention"] --> B["Narrative Decode"]
-    B --> C["Catalyst Read"]
-    C --> D["Spotlight Context"]
-    D --> E["Learning Memory"]
-    E --> F["Token Context"]
-    F --> G["Warnings + Hard Stops"]
-    G --> H["Verdict"]
-    H --> I["Artifact"]
-```
-
-### Token Verdict Decision Graph
+### Spotlight Escalation Logic
 
 ```mermaid
 flowchart TD
-    T["Token Address"] --> A{"Live ANIMEME match?"}
-    A -->|"yes"| B["Read narrative context"]
-    A -->|"no"| C["Lower confidence"]
-    B --> D{"Learning match?"}
-    C --> D
-    D -->|"yes"| E["Compare prior patterns"]
-    D -->|"no"| F["Mark historical context missing"]
-    E --> G{"Hard stop present?"}
-    F --> G
-    G -->|"yes"| AV["avoid"]
-    G -->|"no"| H{"Required context complete?"}
-    H -->|"no"| WA["watch"]
-    H -->|"yes"| R{"Signals coherent?"}
-    R -->|"yes"| RE["researchable"]
-    R -->|"mixed"| WA
-    R -->|"weak"| HR["high-risk"]
+    A["Attention Read"] --> B{"Catalyst clear?"}
+    B -->|"no"| X["do not escalate"]
+    B -->|"yes"| C{"Board presence repeated?"}
+    C -->|"no"| W["watch"]
+    C -->|"yes"| D{"Crowd state improving?"}
+    D -->|"no"| W
+    D -->|"yes"| E{"Token surface coherent?"}
+    E -->|"no"| W
+    E -->|"yes"| F{"Hard stop or missing context?"}
+    F -->|"yes"| W
+    F -->|"no"| S["Spotlight"]
 ```
 
-### Answer Weighting
+### Attention Decay And Invalidation
 
 ```mermaid
-pie title ANIMEME Agent Answer Weighting
-    "Live attention" : 30
-    "Catalyst clarity" : 20
-    "Learning memory" : 20
-    "Token context" : 15
-    "Risk and missing data" : 15
+flowchart TD
+    A["Active attention"] --> B{"Catalyst still true?"}
+    B -->|"no"| I["invalidate thesis"]
+    B -->|"yes"| C{"Still visible on boards?"}
+    C -->|"no"| D["attention decay"]
+    C -->|"yes"| E{"Crowd still healthy?"}
+    E -->|"no"| F["crowded or weak"]
+    E -->|"yes"| G{"Token context still coherent?"}
+    G -->|"no"| F
+    G -->|"yes"| H["continue watch"]
+    D --> W["archive as weak signal"]
+    F --> W
 ```
 
-### Topic Intelligence Map
-
-```mermaid
-flowchart TB
-    Topic["Topic"]
-    Topic --> Story["Story people can retell"]
-    Topic --> Catalyst["Catalyst"]
-    Topic --> Crowd["Crowd state"]
-    Topic --> Token["Token surface"]
-    Topic --> Memory["Learning memory"]
-    Story --> Thesis["Thesis"]
-    Catalyst --> Thesis
-    Crowd --> Risk["Risk"]
-    Token --> Risk
-    Memory --> Watch["Watch plan"]
-    Risk --> Watch
-    Thesis --> Artifact["Research artifact"]
-    Watch --> Artifact
-```
-
-### Demo Flow Graph
+### Narrative Learning Feedback Loop
 
 ```mermaid
 flowchart LR
-    Install["Install skill"] --> Doctor["doctor"]
-    Doctor --> Demo["demo"]
-    Demo --> Pick["pick strongest topic"]
-    Pick --> Thesis["thesis"]
-    Pick --> Risk["risk"]
-    Pick --> Watch["watch"]
-    Thesis --> Summary["agent summary"]
-    Risk --> Summary
-    Watch --> Summary
+    A["Live Attention Read"] --> B["Spotlight observation"]
+    B --> C["Outcome recorded"]
+    C --> D["Pattern extracted"]
+    D --> E["Narrative Learning"]
+    E --> F["Future topic comparison"]
+    F --> A
+```
+
+### Attention Analyst Checklist
+
+```mermaid
+flowchart TD
+    A["Start with topic"] --> B["Name the social object"]
+    B --> C["Find catalyst"]
+    C --> D["Check board movement"]
+    D --> E["Classify crowd state"]
+    E --> F["Inspect token surface"]
+    F --> G["Compare learning memory"]
+    G --> H["List warnings"]
+    H --> I["Write answer"]
+    I --> J["Recommend next command"]
 ```
 
 ---
