@@ -1,87 +1,119 @@
-# Animeme Token Intelligence Playbook
+# ANIMEME Token Intelligence Playbook
 
 Use this playbook when an agent needs to judge whether a token is worth deeper
 research.
+
+## Public Documentation Rule
+
+Keep this playbook ANIMEME-only. Do not expose upstream provider endpoints,
+upstream route paths, adapter internals, credential names, or private
+infrastructure details.
 
 ## Inputs
 
 - Token address.
 - Live attention matches from Now Attention.
-- Direct GMGN API-key market metrics.
-- Animeme public market fallback metrics.
-- Optional Binance Spot/Web3 public market context.
-- Learning archive matches.
-- Optional Spotlight/topic history when the token is attached to a topic.
+- ANIMEME token context.
+- Narrative Learning matches.
+- Attention Spotlight/topic history when the token is attached to a topic.
+- Missing-data status.
+- Hard-stop status.
 
-## Required Data Sources
+## Required Context
 
-Complete token due diligence requires both:
+Complete token due diligence requires:
 
-- Animeme trending context from Now Attention, plus Learning/Spotlight when
-  available.
-- GMGN API-key token metrics for top-10 holder share, creator/dev holding,
-  insider pressure, and bundled activity.
+- ANIMEME live attention context.
+- ANIMEME token context.
+- ANIMEME learning context when available.
+- Explicit missing-data reporting.
+- Explicit hard-stop reporting.
 
-Configure GMGN with `GMGN_API_KEY` or `~/.config/gmgn/.env`. `npm run doctor`
-checks whether the key is configured without printing it. If the key is missing
-or GMGN returns partial metrics, keep the analysis incomplete and do not clear
-hard-stop checks.
-
-Binance public data is optional supporting context. Use it to inspect Spot
-symbol price/ticker/klines or Binance Web3 token metadata/dynamic fields, but
-never use it to override missing GMGN hard-stop metrics.
+If required hard-stop fields are missing, keep the analysis incomplete and do
+not clear the token.
 
 ## Commands
 
 ```bash
-npm run answer -- --prompt "Phân tích token <token-address>"
-npm run answer -- --prompt "Token <token-address> có an toàn không?"
-npm run answer -- --prompt "GMGN và Binance data của <token-address>"
+npm run answer -- --prompt "Analyze token <token-address>"
+npm run answer -- --prompt "Is token <token-address> safe?"
 npm run doctor
 npm run token -- --address <token-address>
 npm run token:deep -- --address <token-address>
-npm run gmgn -- --address <token-address>
-npm run binance -- --symbol SOLUSDT --address <token-address>
 npm run topics -- --token <token-address>
 ```
 
 Use `answer` for user-facing demo prompts. It produces a concise response and
-loads the same required token data plus Binance public context. Use the lower
-level commands when the user explicitly asks for raw provider output or artifact
-inspection.
+loads the same token workflow. Use lower-level commands when the user asks for
+artifact inspection or a more structured report.
 
 ## Verdicts
 
 - `researchable`: enough clean signals to continue research.
 - `watch`: mixed signals or incomplete data.
-- `high-risk`: weak attention and poor/incomplete metrics.
+- `high-risk`: weak attention and poor or incomplete context.
 - `avoid`: hard-stop concentration or manipulation risk.
 
 ## Hard Stops
 
-- Top-10 holder share above 50%.
-- Creator/dev holding share above 30%.
-- Insider share above 30%.
-- Bundled activity above 35%.
+- Top-holder concentration above the hard-stop threshold.
+- Creator/dev concentration above the hard-stop threshold.
+- Insider pressure above the hard-stop threshold.
+- Bundled activity above the hard-stop threshold.
+- Required hard-stop fields are missing and cannot be verified.
 
 ## Warnings
 
-- No live Animeme attention match.
-- Public API connectivity is degraded.
-- No GMGN API-key market metrics yet.
-- Partial GMGN response missing required hard-stop fields.
-- Binance public data missing when the user requested provider confirmation.
-- Top-10 holder share above 20%.
-- Creator/dev holding share above 10%.
-- Insider share above 10%.
-- Bundled activity above 15%.
-- Fresh-wallet share above 70%.
-- Smart holder count is zero.
+- No live ANIMEME attention match.
+- Public ANIMEME connectivity is degraded.
+- Required token context is missing.
+- Partial token context is missing hard-stop fields.
+- Top-holder concentration is elevated.
+- Creator/dev concentration is elevated.
+- Insider pressure is elevated.
+- Bundled activity is elevated.
+- Fresh-wallet dominance is elevated.
+- Smart holder context is weak or absent.
+
+## Analysis Order
+
+1. Validate the token address shape.
+2. Load ANIMEME public context.
+3. Check live attention match.
+4. Check Narrative Learning match.
+5. Check Attention Spotlight context.
+6. Check ANIMEME token context.
+7. Apply warnings and hard stops.
+8. Produce one verdict.
+9. Write artifacts.
+10. Recommend the next research command, not a trade.
 
 ## Output Policy
 
 - Say what is missing.
 - Keep the output advisory.
 - Do not reveal backend adapter names in user-facing artifacts.
-- Do not print API keys or write them to artifacts.
+- Do not print secrets or write them to artifacts.
 - Do not say a token is guaranteed safe.
+- Do not use missing data as positive evidence.
+
+## Recommended Answer Shape
+
+```text
+Verdict: watch
+Confidence: medium
+Score: 54/100
+
+Why it matters:
+- The token has a live ANIMEME attention match.
+- The narrative is readable.
+- The learning match is partial.
+
+Warnings:
+- Required hard-stop context is incomplete.
+- Crowd context is not fully cleared.
+
+Next:
+- Run a thesis on the matched topic.
+- Keep the token in watch mode until missing context is resolved.
+```

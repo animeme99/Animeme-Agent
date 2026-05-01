@@ -1,25 +1,33 @@
 ---
 name: animeme-data
-description: Use live public Animeme data, direct GMGN metrics, and Binance public market/Web3 data to scan trends, analyze tokens, inspect Attention Spotlight, query learning data, and publish advisory artifacts for Codex, Claude Code, OpenCode, and OpenClaw.
+description: Use live public ANIMEME intelligence to scan trends, inspect Attention Spotlight, query Narrative Learning, analyze tokens, and publish advisory artifacts for Codex, Claude Code, OpenCode, and OpenClaw.
 ---
 
-# Animeme Data
+# ANIMEME Data
 
-Use this skill whenever the user asks an agent to work with Animeme public
-data. It is compatible with Codex, Claude Code, OpenCode, OpenClaw, and other
-AgentSkills-compatible runtimes. For deeper token due diligence, also load
+Use this skill whenever the user asks an agent to work with ANIMEME public
+intelligence. It is compatible with Codex, Claude Code, OpenCode, OpenClaw, and
+other AgentSkills-compatible runtimes.
+
+For deeper token due diligence, also load
 `.agents/skills/animeme-token-intelligence/SKILL.md`.
+
+## Public Documentation Rule
+
+Keep public docs ANIMEME-only. Do not expose upstream provider endpoints,
+provider route paths, adapter internals, credential names, or private
+infrastructure details. Describe data as ANIMEME public intelligence, ANIMEME
+token context, ANIMEME learning, or ANIMEME spotlight context.
 
 ## Scope
 
 - Read live public context from `https://animeme.app`.
-- Access current trend boards, new topics, Attention Spotlight, learning data,
-  direct GMGN token metrics, Binance public market/Web3 data, and Animeme
-  market fallback metrics for arbitrary token addresses.
+- Access Now Attention, Attention Spotlight, Narrative Learning, Explore
+  Narrative, and ANIMEME token context.
 - Prefer the CLI commands in this repo before inventing new fetch flows.
 - Create advisory JSON and Markdown artifacts under `artifacts/`.
-- Never trade, sign transactions, request private keys, or mutate production
-  Animeme state.
+- Never trade, sign transactions, request private keys, or mutate ANIMEME
+  production state.
 
 If the current working folder only contains this `SKILL.md` and no
 `package.json`, clone the repo first:
@@ -33,9 +41,9 @@ npm install
 ## Fast Path
 
 ```bash
-npm run answer -- --prompt "Trending Narrative hiện là gì?"
-npm run answer -- --prompt "Narrative <name> nói về cái gì?"
-npm run answer -- --prompt "Phân tích token <token-address>"
+npm run answer -- --prompt "What narrative is trending right now?"
+npm run answer -- --prompt "What is <narrative-name> about?"
+npm run answer -- --prompt "Analyze token <token-address>"
 npm run doctor
 npm run demo
 npm run brief
@@ -43,58 +51,52 @@ npm run catalog
 npm run scan
 npm run token -- --address <token-address>
 npm run token:deep -- --address <token-address>
-npm run gmgn -- --address <token-address>
-npm run binance -- --symbol SOLUSDT
-npm run binance:spot -- --path /api/v3/ticker/price --symbol SOLUSDT
-npm run binance:web3 -- --mode search --keyword SOL --chain-ids CT_501
 npm run spotlight
 npm run learning
 ```
 
-For complete token analysis, configure `GMGN_API_KEY` in the environment or in
-`~/.config/gmgn/.env`. The doctor command checks only whether it exists.
-If npm strips flags in the current shell, token and provider commands accept
-positional forms such as `npm run token:deep -- <token-address>` and
-`npm run binance:spot -- /api/v3/ticker/price SOLUSDT`.
+If npm strips flags in the current shell, token commands accept positional
+forms such as:
+
+```bash
+npm run token:deep -- <token-address>
+```
 
 ## Natural-Language Demo Router
 
 Use `npm run answer -- --prompt "<question>"` when the user asks in normal
 language. It is the best path for video demos and first-time users.
-If the local npm shell strips `--prompt`, use
-`npm run answer -- "<question>"`.
+
+If the local npm shell strips `--prompt`, use:
+
+```bash
+npm run answer -- "<question>"
+```
 
 Supported prompt families:
 
-- `Phân tích token X`, `Token X có an toàn không?`, `Analyze token X`: loads
-  Animeme Now Attention, Narrative Learning, direct GMGN API-key metrics,
-  Animeme market fallback, and Binance public Spot/Web3 context.
-- `Trending Narrative hiện là gì?`, `What is hot now?`, `Topic nào đang rising?`:
-  returns current Now Attention ranking and follow-up prompts.
-- `Narrative X nói về cái gì?`, `Explain narrative X`, `What is X about?`:
-  searches live topics plus Narrative Learning and includes Spotlight signal
-  keys when available.
-- `Attention Spotlight đang highlight gì?`, `What is Spotlight showing?`:
-  loads the current Spotlight preview and recent performance notifications.
-- `GMGN và Binance data của X`: returns separate Animeme, GMGN, and Binance
-  provider sections.
-- `check setup`, `doctor`, `kiểm tra cài đặt`: runs the doctor readiness report.
+- `Analyze token X`: ANIMEME token intelligence.
+- `Is token X safe?`: token due diligence with warnings and hard stops.
+- `What narrative is trending right now?`: current Now Attention ranking.
+- `What is narrative X about?`: live topic, learning, and spotlight context.
+- `What is Attention Spotlight showing?`: current Spotlight preview.
+- `What should I watch next?`: watch plan from current attention.
+- `Check setup`: doctor readiness report.
 
-For Vietnamese prompts, answer in Vietnamese. Keep the response concise:
-conclusion, data sources, current signal, missing data, warnings, and next
-prompt.
+Keep the response concise: conclusion, ANIMEME context used, signal read,
+warnings or hard stops, missing data, and next prompt.
 
 ## First Response Guide
 
-When the user just installed the skill, asks what Animeme can do, or seems
+When the user just installed the skill, asks what ANIMEME can do, or seems
 unsure where to start, respond with this menu before running commands:
 
 ```text
-Animeme Agent can help with:
-1. Scan what is hot now.
+ANIMEME Agent Skill can help with:
+1. Scan what has attention now.
 2. Explain Attention Spotlight.
 3. Search Narrative Learning.
-4. Analyze any token address.
+4. Analyze a token address.
 5. Create thesis, risk, and watch artifacts.
 ```
 
@@ -114,13 +116,9 @@ If the user provides a token address, use the token flow instead:
 
 ```text
 Token demo flow:
-- Run npm run doctor and check GMGN API key status.
+- Run npm run doctor.
 - Run npm run token:deep -- --address <token-address>.
-- Run npm run gmgn -- --address <token-address> when raw direct GMGN fields are
-  needed.
-- Run npm run binance -- --symbol SOLUSDT --address <token-address> when
-  Binance Spot/Web3 context is needed.
-- Explain the Animeme Intelligence Score.
+- Explain the ANIMEME Intelligence Score.
 - Separate strengths, warnings, hard stops, and missing data.
 - Recommend the next research command, not a trade.
 ```
@@ -132,8 +130,10 @@ npm run hot -- --limit 20
 npm run new -- --mode latest
 npm run topics -- --search <query>
 npm run topic -- --topic <topic-id>
-npm run fetch -- --path /api/learning/topics?pageSize=5
+npm run fetch -- --path /api/<animeme-path>
 ```
+
+Only use `fetch` for ANIMEME public routes.
 
 ## Artifact Commands
 
@@ -145,39 +145,33 @@ npm run watch -- --topic <topic-id>
 
 ## Workflow
 
-1. Run `npm run catalog` when you need to know which public data surface fits
+1. Run `npm run catalog` when you need to know which ANIMEME data surface fits
    the task.
-2. Run `npm run doctor` when setup or API reachability is unknown.
+2. Run `npm run doctor` when setup or reachability is unknown.
 3. Run `npm run demo`, `npm run brief`, or `npm run context` when the user
    wants the easiest full public data snapshot.
-4. Run `npm run scan` to get a focused live attention context.
+4. Run `npm run scan` to get focused live attention context.
 5. Use `token` for arbitrary token address analysis.
-6. Use `token:deep` when the user asks if a token is safe, risky, manipulated,
-   crowded, or worth deeper research. Complete analysis requires both Animeme
-   trending data and GMGN API-key metrics.
-7. Use `gmgn`, `binance`, `binance:spot`, or `binance:web3` when the user asks
-   for raw provider data. Keep source sections separate.
-8. Use `spotlight` when the user asks what Attention Spotlight is showing.
-9. Use `learning`, `topics`, or `topic` when the user asks for historic lessons
+6. Use `token:deep` when the user asks if a token is safe, risky, crowded, or
+   worth deeper research.
+7. Use `spotlight` when the user asks what Attention Spotlight is showing.
+8. Use `learning`, `topics`, or `topic` when the user asks for historic lessons
    or narrative research.
-10. Use `thesis`, `risk`, and `watch` to turn a selected topic into an advisory
+9. Use `thesis`, `risk`, and `watch` to turn a selected topic into an advisory
    artifact.
-11. Keep all outputs advisory, timestamped, and user-controlled.
+10. Keep all outputs advisory, timestamped, and user-controlled.
 
 ## Interpretation Rules
 
-- Strong trend means a topic is visible in live boards and has enough flow,
-  token surface, or Spotlight context to justify more research.
-- New topic means it appears on the latest board or recently entered learning
-  data.
-- Token analysis should combine live topic matches, GMGN API-key market
-  metrics, Animeme market fallback data, and learning archive matches.
-- Binance data is supporting market context. Do not treat Binance price or Web3
-  tags as execution instructions.
+- Strong trend means a topic is visible in ANIMEME live attention and has
+  enough catalyst, flow, token surface, or Spotlight context to justify more
+  research.
+- New topic means it appears in recent ANIMEME attention.
+- Token analysis should combine live topic matches, ANIMEME token context, and
+  ANIMEME learning archive matches.
 - Missing data is not bullish. State what is missing and keep the item in
   observation mode.
-- Do not call token hard stops cleared when GMGN API-key holder, insider, or
-  bundler fields are missing.
+- Do not call token hard stops cleared when required context is missing.
 
 ## Memory
 
